@@ -6,7 +6,7 @@ import closeEye from "../assets/closeEye.png";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import {useNavigate} from "react-router-dom"
-import { authDataContext } from "../context/authContext";
+import { authDataContext } from "../context/AuthContext";
 import { adminDataContext } from "../context/AdminContext";
 
 
