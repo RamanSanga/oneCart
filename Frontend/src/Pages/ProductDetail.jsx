@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { shopDataContext } from "../Context/ShopContext";
-import RelatedProduct from "../component/RelatedProduct";
+import RelatedProduct from "../component/relatedProduct";
 import { Heart } from "lucide-react";
 
 function ProductDetail() {
