@@ -4,8 +4,8 @@ import oneCart from "../assets/oneCart.png";
 import openEye from "../assets/openEye.png";
 import closeEye from "../assets/closeEye.png";
 import { Link, useNavigate } from "react-router-dom";
-import { authDataContext } from "../Context/authContext";
-import { userDataContext } from "../Context/userContext";
+import { authDataContext } from "../Context/AuthContext";
+import { userDataContext } from "../Context/UserContext";
 import axios from "axios";
 import {
   signInWithRedirect,
