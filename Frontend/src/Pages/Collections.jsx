@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import { shopDataContext } from "../Context/shopContext";
+import { shopDataContext } from "../Context/ShopContext";
 import Card from "../component/Card";
 import { FiFilter, FiX } from "react-icons/fi";
 
