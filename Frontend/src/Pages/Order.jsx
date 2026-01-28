@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import axios from "axios";
-import { authDataContext } from "../Context/authContext";
-import { shopDataContext } from "../Context/shopContext";
+import { authDataContext } from "../Context/AuthContext";
+import { shopDataContext } from "../Context/ShopContext";
 
 function Order() {
   const { serverUrl } = useContext(authDataContext);
