@@ -5,8 +5,8 @@ import React, {
   useEffect
 } from "react";
 import axios from "axios";
-import { authDataContext } from "./authContext";
-import { userDataContext } from "./userContext";
+import { authDataContext } from "./AuthContext";
+import { userDataContext } from "./UserContext";
 
 export const shopDataContext = createContext();
 
