@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
-import { shopDataContext } from "../Context/shopContext";
-import { userDataContext } from "../Context/userContext";
-import { authDataContext } from "../Context/authContext.jsx";
+import { shopDataContext } from "../Context/ShopContext";
+import { userDataContext } from "../Context/UserContext";
+import { authDataContext } from "../Context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
 import razorpayImg from "../assets/Razorpay.png";
 import axios from "axios";
