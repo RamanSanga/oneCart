@@ -3,7 +3,7 @@ import { shopDataContext } from "../Context/ShopContext";
 import { userDataContext } from "../Context/UserContext";
 import { authDataContext } from "../Context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
-import razorpayImg from "../assets/Razorpay.png";
+import razorpayImg from "../assets/razorpay.png";
 import axios from "axios";
 
 function PlaceOrder() {
