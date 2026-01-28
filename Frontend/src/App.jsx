@@ -20,7 +20,7 @@ import NotFound from "./Pages/NotFound.jsx";
 import Ai from "./component/Ai.jsx";
 
 import { userDataContext } from "./context/UserContext.jsx";
-import { authDataContext } from "./Context/authContext.jsx";
+import { authDataContext } from "./Context/AuthContext.jsx";
 
 import { getRedirectResult } from "firebase/auth";
 import { auth } from "../utils/Firebase";
