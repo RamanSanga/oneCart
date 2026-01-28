@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import { shopDataContext } from "../Context/shopContext";
+import { shopDataContext } from "../Context/ShopContext";
 import { FiMinus, FiPlus, FiTrash2, FiHeart } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 
