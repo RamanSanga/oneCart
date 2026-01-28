@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import Nav from "../component/Nav.jsx";
-import SideBar from "../component/SideBar.jsx";
+import SideBar from "../component/Sidebar.jsx";
 import { authDataContext } from "../context/AuthContext.jsx";
 import { Trash2, Plus } from "lucide-react";
 
