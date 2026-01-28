@@ -19,7 +19,7 @@ import Wishlist from "./Pages/Wishlist.jsx";
 import NotFound from "./Pages/NotFound.jsx";
 import Ai from "./component/Ai.jsx";
 
-import { userDataContext } from "./context/UserContext.jsx";
+import { userDataContext } from "./Context/UserContext.jsx";
 import { authDataContext } from "./Context/AuthContext.jsx";
 
 import { getRedirectResult } from "firebase/auth";
