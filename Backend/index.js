@@ -21,6 +21,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 const allowedOrigins = [
+  "https://onecart-1-frontend32.onrender.com",
   "http://localhost:5173",
   "http://localhost:5174",
   "http://localhost:5175",
