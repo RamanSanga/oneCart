@@ -1,6 +1,6 @@
 import React, { useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { userDataContext } from "../Context/userContext";
+import { userDataContext } from "../Context/UserContext";
 
 function NotFound() {
   const navigate = useNavigate();
