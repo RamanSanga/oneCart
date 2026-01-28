@@ -22,10 +22,7 @@ app.use(cookieParser());
 
 const allowedOrigins = [
   "https://onecart-1-frontend32.onrender.com",
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "http://localhost:5175",
-  "http://localhost:3000" // add if you run frontend on 3000
+  "https://onecart-1-admin3.onrender.com",
 ];
 
 const corsOptions = {
