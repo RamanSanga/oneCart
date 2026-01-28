@@ -10,9 +10,9 @@ import {
 } from "react-icons/fi";
 import axios from "axios";
 
-import { userDataContext } from "../Context/userContext";
-import { authDataContext } from "../Context/authContext";
-import { shopDataContext } from "../Context/shopContext";
+import { userDataContext } from "../Context/UserContext";
+import { authDataContext } from "../Context/AuthContext";
+import { shopDataContext } from "../Context/ShopContext";
 
 export default function Navbar() {
   const { showSearch, setShowSearch, search, setSearch, getCartCount } =
