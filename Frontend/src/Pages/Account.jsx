@@ -1,6 +1,6 @@
 // src/Pages/Account.jsx
 import React, { useContext } from "react";
-import { userDataContext } from "../context/UserContext.jsx";
+import { userDataContext } from "../Context/UserContext.jsx";
 import Nav from "../component/Nav.jsx";
 
 function Account() {
