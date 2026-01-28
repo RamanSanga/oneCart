@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import { shopDataContext } from "../Context/shopContext";
+import { shopDataContext } from "../Context/ShopContext";
 import { Heart, ShoppingBag, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
