@@ -1,0 +1,76 @@
+/* =============================
+   MASK REVEAL (PREMIUM)
+============================= */
+
+.reveal {
+  overflow: hidden;
+}
+
+.reveal-inner {
+  display: inline-block;
+  transform: translateY(120%);
+  transition: transform 1.2s cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.reveal.show .reveal-inner {
+  transform: translateY(0);
+}
+
+/* =============================
+   IMAGE REVEAL
+============================= */
+
+.image-reveal {
+  position: relative;
+  overflow: hidden;
+}
+
+.image-reveal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  transform: translateX(0);
+  transition: transform 1.4s cubic-bezier(0.77, 0, 0.175, 1);
+  z-index: 2;
+}
+
+.image-reveal.show::after {
+  transform: translateX(100%);
+}
+
+.image-reveal img {
+  transform: scale(1.15);
+  transition: transform 1.4s ease;
+}
+
+.image-reveal.show img {
+  transform: scale(1);
+}
+
+
+/* STICKY SCROLL TEXT */
+.sticky-wrap {
+  position: relative;
+  height: 200vh; /* controls duration */
+}
+
+.sticky-text {
+  position: sticky;
+  top: 40%;
+  font-size: clamp(2rem, 6vw, 4rem);
+  font-weight: 300;
+  text-align: center;
+  letter-spacing: -0.02em;
+  opacity: 0.15;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.sticky-text.active {
+  opacity: 1;
+}
+
+.sticky-text.exit {
+  transform: translateY(-80px);
+  opacity: 0;
+}
