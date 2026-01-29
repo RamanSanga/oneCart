@@ -99,20 +99,10 @@ export const googleLogin = async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: true,          
+      sameSite: "None",    
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-
-    return res.status(200).json(user);
-  } catch (error) {
-    console.error("Google Login Error:", error);
-    return res.status(500).json({
-      message: "Google Login error",
-      error: error.message,
-    });
-  }
-};
 
 
 //...existing code...
