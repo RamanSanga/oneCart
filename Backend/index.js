@@ -11,7 +11,7 @@ import productRoutes from './routes/productRoutes.js'
 import cartRoutes from './routes/cartRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import adminRoutes from "./routes/adminRoutes.js";
-import rajorRouter from "./routes/rajorRouter.js";
+import rajorRouter from "./routes/rajorRouter.js"; 
 
 const app = express();
 app.set("trust proxy", 1);
