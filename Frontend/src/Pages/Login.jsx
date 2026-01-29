@@ -7,10 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { authDataContext } from "../Context/AuthContext";
 import { userDataContext } from "../Context/UserContext";
 import axios from "axios";
-import {
-  signInWithRedirect,
-  getRedirectResult,
-} from "firebase/auth";
+import { signInWithPopup } from "firebase/auth";
 import { auth, provider } from "../../utils/Firebase";
 
 export default function LoginPage() {
@@ -47,49 +44,27 @@ export default function LoginPage() {
   };
 
   /* ================= GOOGLE LOGIN (STEP 1) ================= */
-  const googleLogin = async () => {
-    try {
-      setGoogleLoading(true);
-      await signInWithRedirect(auth, provider);
-    } catch (error) {
-      console.error("Google redirect error:", error);
-      setGoogleLoading(false);
-    }
-  };
+ const googleLogin = async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
 
-  /* ================= GOOGLE LOGIN (STEP 2) ================= */
-  useEffect(() => {
-    const handleRedirectLogin = async () => {
-      try {
-        const result = await getRedirectResult(auth);
+    await axios.post(
+      serverUrl + "/api/auth/googlelogin",   // ✅ EXACT MATCH
+      {
+        name: user.displayName,
+        email: user.email,
+      },
+      { withCredentials: true }
+    );
 
-        if (!result || !result.user) return;
-
-        const user = result.user;
-        const name = user.displayName;
-        const email = user.email;
-
-        // Send Google user to backend
-        await axios.post(
-          serverUrl + "/api/auth/googlelogin",
-          { name, email },
-          { withCredentials: true }
-        );
-
-        await getCurrentUser();
-        navigate("/");
-      } catch (error) {
-        console.error(
-          "Google login error:",
-          error?.response?.data || error.message
-        );
-      } finally {
-        setGoogleLoading(false);
-      }
-    };
-
-    handleRedirectLogin();
-  }, [serverUrl, getCurrentUser, navigate]);
+    await getCurrentUser();
+    navigate("/");
+  } catch (error) {
+    console.error("Google Login Error:", error);
+    alert(error.message || "Google login failed");
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-[#021a24] to-[#051f2d] flex items-center justify-center p-6">
