@@ -48,48 +48,32 @@ export default function SignupPage() {
   };
 
   /* ================= GOOGLE SIGNUP (STEP 1) ================= */
-  const googleSignUp = async () => {
-    try {
-      setGoogleLoading(true);
-      await signInWithRedirect(auth, provider);
-    } catch (error) {
-      console.error("Google redirect error:", error);
-      setGoogleLoading(false);
-    }
-  };
+const googleSignUp = async () => {
+  try {
+    setGoogleLoading(true);
 
-  /* ================= GOOGLE SIGNUP (STEP 2) ================= */
-  useEffect(() => {
-    const handleRedirectSignup = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (!result || !result.user) return;
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
 
-        const user = result.user;
+    await axios.post(
+      serverUrl + "/api/auth/googlelogin",
+      {
+        name: user.displayName,
+        email: user.email,
+      },
+      { withCredentials: true }
+    );
 
-        await axios.post(
-          serverUrl + "/api/auth/googlelogin",
-          {
-            name: user.displayName,
-            email: user.email,
-          },
-          { withCredentials: true }
-        );
+    await getCurrentUser();
+    navigate("/");
+  } catch (error) {
+    console.error("Google signup error:", error);
+    alert(error.message || "Google signup failed");
+  } finally {
+    setGoogleLoading(false);
+  }
+};
 
-        await getCurrentUser();
-        navigate("/");
-      } catch (error) {
-        console.error(
-          "Google signup error:",
-          error?.response?.data || error.message
-        );
-      } finally {
-        setGoogleLoading(false);
-      }
-    };
-
-    handleRedirectSignup();
-  }, [serverUrl, getCurrentUser, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-[#021a24] to-[#051f2d] flex items-center justify-center p-6">
