@@ -7,10 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { authDataContext } from "../Context/AuthContext";
 import { userDataContext } from "../Context/UserContext";
 import axios from "axios";
-import {
-  signInWithRedirect,
-  getRedirectResult,
-} from "firebase/auth";
+import { signInWithPopup } from "firebase/auth";
 import { auth, provider } from "../../utils/Firebase";
 
 export default function SignupPage() {
