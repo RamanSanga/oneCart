@@ -94,11 +94,15 @@ export const googleLogin = async (req, res) => {
     const { name, email } = req.body;
 
     let user = await User.findOne({ email });
+
     if (!user) {
+      // IMPORTANT: give a valid 8+ character password
+      const randomPassword = Math.random().toString(36).slice(2) + "Google@123";
+
       user = await User.create({
         name,
         email,
-        password: "google-auth-user",
+        password: randomPassword,
       });
     }
 
@@ -108,14 +112,17 @@ export const googleLogin = async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: "none",
+      path: "/",          // ✅ critical for cross-site cookies
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return res.status(200).json(user);
   } catch (error) {
+    console.error("Google Login Error:", error);
     return res.status(500).json({ message: "Google login error" });
   }
 };
+
 
 // ADMIN LOGIN
 export const adminLogin = async (req, res) => {
