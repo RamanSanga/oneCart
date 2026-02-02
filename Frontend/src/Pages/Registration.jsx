@@ -47,13 +47,11 @@ export default function SignupPage() {
   /* ================= GOOGLE SIGNUP (STEP 1) ================= */
 const googleSignUp = async () => {
   try {
-    setGoogleLoading(true);
-
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
 
     await axios.post(
-      serverUrl + "/api/auth/googlelogin",
+      serverUrl + "/api/auth/googlelogin",   // ✅ EXACT MATCH
       {
         name: user.displayName,
         email: user.email,
@@ -64,10 +62,8 @@ const googleSignUp = async () => {
     await getCurrentUser();
     navigate("/");
   } catch (error) {
-    console.error("Google signup error:", error);
-    alert(error.message || "Google signup failed");
-  } finally {
-    setGoogleLoading(false);
+    console.error("Google Login Error:", error);
+    alert(error.message || "Google login failed");
   }
 };
 
