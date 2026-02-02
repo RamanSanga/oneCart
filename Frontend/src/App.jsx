@@ -19,8 +19,8 @@ import Wishlist from "./Pages/Wishlist";
 import NotFound from "./Pages/NotFound";
 import Ai from "./component/Ai.jsx";
 
-import { userDataContext } from "./context/UserContext.jsx";
-import { authDataContext } from "./Context/authContext.jsx";
+import { userDataContext } from "./Context/UserContext.jsx";
+import { authDataContext } from "./Context/AuthContext.jsx";
 
 function App() {
   const { userData } = useContext(userDataContext);
