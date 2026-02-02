@@ -1,10 +1,10 @@
-const User = require("../model/userModel");
-const validator = require("validator");
-const bcrypt = require("bcryptjs");
-const { genToken, genToken1 } = require("../config/token");
+import User from "../model/userModel.js";
+import validator from "validator";
+import bcrypt from "bcryptjs";
+import { genToken, genToken1 } from "../config/token.js";
 
-// ================= REGISTER =================
-const registration = async (req, res) => {
+// REGISTER
+export const registration = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
@@ -40,24 +40,21 @@ const registration = async (req, res) => {
 
     return res.status(201).json(user);
   } catch (error) {
-    console.error("signUp Error", error);
-    return res.status(500).json({ message: "SignUp error" });
+    return res.status(500).json({ message: "Signup error" });
   }
 };
 
-// ================= LOGIN =================
-const login = async (req, res) => {
+// LOGIN
+export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Incorrect Password" });
+      return res.status(400).json({ message: "Incorrect password" });
     }
 
     const token = await genToken(user._id);
@@ -71,13 +68,12 @@ const login = async (req, res) => {
 
     return res.status(200).json(user);
   } catch (error) {
-    console.error("Login Error", error);
     return res.status(500).json({ message: "Login error" });
   }
 };
 
-// ================= LOGOUT =================
-const logout = async (req, res) => {
+// LOGOUT
+export const logout = async (req, res) => {
   try {
     res.clearCookie("token", {
       httpOnly: true,
@@ -86,20 +82,18 @@ const logout = async (req, res) => {
       path: "/",
     });
 
-    return res.status(200).json({ message: "Log Out Successfully" });
+    return res.status(200).json({ message: "Logged out" });
   } catch (error) {
-    console.error("LogOut Error", error);
-    return res.status(500).json({ message: "LogOut error" });
+    return res.status(500).json({ message: "Logout error" });
   }
 };
 
-// ================= GOOGLE LOGIN =================
-const googleLogin = async (req, res) => {
+// GOOGLE LOGIN
+export const googleLogin = async (req, res) => {
   try {
     const { name, email } = req.body;
 
     let user = await User.findOne({ email });
-
     if (!user) {
       user = await User.create({
         name,
@@ -119,13 +113,12 @@ const googleLogin = async (req, res) => {
 
     return res.status(200).json(user);
   } catch (error) {
-    console.error("Google Login Error", error);
     return res.status(500).json({ message: "Google login error" });
   }
 };
 
-// ================= ADMIN LOGIN =================
-const adminLogin = async (req, res) => {
+// ADMIN LOGIN
+export const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -147,16 +140,6 @@ const adminLogin = async (req, res) => {
 
     return res.status(400).json({ message: "Invalid credentials" });
   } catch (error) {
-    console.error("Admin Login Error", error);
     return res.status(500).json({ message: "Admin login error" });
   }
-};
-
-// ================= EXPORT =================
-module.exports = {
-  registration,
-  login,
-  logout,
-  googleLogin,
-  adminLogin,
 };
