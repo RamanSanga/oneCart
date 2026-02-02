@@ -16,7 +16,7 @@ import OrderSuccess from "./Pages/OrderSuccess";
 import Order from "./Pages/Order.jsx";
 import Account from "./Pages/Account.jsx";
 import Wishlist from "./Pages/Wishlist";
-import NotFound from "./pages/NotFound";
+import NotFound from "./Pages/NotFound";
 import Ai from "./component/Ai.jsx";
 
 import { userDataContext } from "./context/UserContext.jsx";
