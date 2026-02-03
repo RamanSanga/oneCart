@@ -133,19 +133,21 @@ export const adminLogin = async (req, res) => {
       email === process.env.ADMIN_EMAIL &&
       password === process.env.ADMIN_PASSWORD
     ) {
-      const token = await genToken1(email);
+      const token = genAdminToken(email);
 
-     res.cookie("adminToken", token, {   // <-- NEW NAME
-  httpOnly: true,
-  secure: true,
-  sameSite: "none",
-  path: "/",                        // IMPORTANT
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-});
+      res.cookie("adminToken", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
 
-return res.status(200).json({ success: true });
+      return res.status(200).json({ success: true, message: "Admin logged in" });
+    }
 
-    return res.status(400).json({ message: "Invalid credentials" });
+    return res.status(400).json({ message: "Invalid admin credentials" });
+
   } catch (error) {
     return res.status(500).json({ message: "Admin login error" });
   }
