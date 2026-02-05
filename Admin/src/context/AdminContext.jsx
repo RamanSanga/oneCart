@@ -12,15 +12,18 @@ function AdminContext({ children }) {
   const getAdmin = useCallback(async () => {
     try {
       const result = await axios.get(
-        `${serverUrl}/api/admin/getadmin`,  // ✅ FIXED
+        `${serverUrl}/api/admin/stats`,   // ✅ CORRECT ROUTE
         { withCredentials: true }
       );
 
       setAdminData(result.data);
-      console.log("getAdmin:", result.data);
+      console.log("Admin stats:", result.data);
 
     } catch (error) {
-      console.error("getAdmin error:", error.message);
+      console.error(
+        "getAdmin error:",
+        error?.response?.status || error.message
+      );
       setAdminData(null);
     }
   }, [serverUrl]);
@@ -39,3 +42,4 @@ function AdminContext({ children }) {
 }
 
 export default AdminContext;
+
