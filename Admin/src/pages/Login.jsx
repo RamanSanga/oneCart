@@ -28,13 +28,14 @@ export default function LoginPage() {
   e.preventDefault();
   try {
     const result = await axios.post(
-      serverUrl + "/api/auth/adminlogin",
-      {
-        email: form.email,
-        password: form.password,
-      },
-      { withCredentials: true }
-    );
+  `${serverUrl}/api/auth/adminlogin`,   // ← FIXED TEMPLATE STRING
+  {
+    email: form.email,
+    password: form.password,
+  },
+  { withCredentials: true }
+);
+
 
     console.log(result.data);
     getAdmin();
