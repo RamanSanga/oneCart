@@ -15,50 +15,25 @@ import adminRoutes from "./routes/adminRoutes.js";
 import rajorRouter from "./routes/rajorRouter.js";
 
 const app = express();
+const port = process.env.PORT || 8000;
 
-// ======= BASIC MIDDLEWARE =======
+// ======= MIDDLEWARE =======
 app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
-// ======= FIXED CORS (WON’T CRASH) =======
-const allowedOrigins = [
-  "https://onecart-1-frontend32.onrender.com",
-  "https://onecart-1-admin3.onrender.com",
-];
-
+// ✅ SIMPLE CORS THAT ACTUALLY WORKS ON RENDER
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // allow requests with no origin (Postman, mobile apps, server calls)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, true); // <-- safer for production
-      }
-    },
+    origin: [
+      "https://onecart-1-frontend32.onrender.com",
+      "https://onecart-1-admin3.onrender.com",
+    ],
     credentials: true,
   })
 );
 
-// Handle preflight requests SAFELY (correct way)
-app.use((req, res, next) => {
-  if (req.method === "OPTIONS") {
-    res.header("Access-Control-Allow-Origin", req.headers.origin);
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-    res.header(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization"
-    );
-    return res.sendStatus(200);
-  }
-  next();
-});
-
-// ======= HEALTH CHECK =======
+// health check
 app.get("/health", (_req, res) => res.send("OK"));
 
 // ======= ROUTES =======
@@ -70,9 +45,7 @@ app.use("/api/order", orderRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/rajor", rajorRouter);
 
-// ======= PORT & DB CONNECTION =======
-const port = process.env.PORT || 8000;
-
+// ======= DB + SERVER =======
 connectDb()
   .then(() => {
     app.listen(port, () => {
@@ -83,4 +56,5 @@ connectDb()
     console.error("DB connection failed:", err);
     process.exit(1);
   });
+
 
