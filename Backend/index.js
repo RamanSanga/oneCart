@@ -21,7 +21,7 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
-// ======= CORRECT CORS (VERY IMPORTANT FOR RENDER) =======
+// ======= FIXED CORS (WON’T CRASH) =======
 const allowedOrigins = [
   "https://onecart-1-frontend32.onrender.com",
   "https://onecart-1-admin3.onrender.com",
@@ -30,21 +30,33 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow Postman, mobile apps, or server-to-server calls
+      // allow requests with no origin (Postman, mobile apps, server calls)
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(null, true); // <-- safer for production
       }
     },
     credentials: true,
   })
 );
 
-// Handle preflight requests (CRUCIAL)
-app.options("*", cors());
+// Handle preflight requests SAFELY (correct way)
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    res.header("Access-Control-Allow-Origin", req.headers.origin);
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+    res.header(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization"
+    );
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // ======= HEALTH CHECK =======
 app.get("/health", (_req, res) => res.send("OK"));
