@@ -124,8 +124,7 @@ export const googleLogin = async (req, res) => {
 };
 
 
-// ADMIN LOGIN
-// ADMIN LOGIN  ✅ FIXED VERSION
+// ADMIN LOGIN  ✅ SAFE VERSION
 export const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -134,10 +133,9 @@ export const adminLogin = async (req, res) => {
       email === process.env.ADMIN_EMAIL &&
       password === process.env.ADMIN_PASSWORD
     ) {
-      // Use existing token function instead of undefined one
-      const token = await genToken1(email);   // ✅ FIX
+      const token = await genToken1({ role: "admin", email });
 
-      res.cookie("adminToken", token, {      // keep this name consistent
+      res.cookie("adminToken", token, {
         httpOnly: true,
         secure: true,
         sameSite: "none",
@@ -147,12 +145,11 @@ export const adminLogin = async (req, res) => {
 
       return res.status(200).json({
         success: true,
-        message: "Admin logged in"
+        message: "Admin logged in",
       });
     }
 
     return res.status(400).json({ message: "Invalid admin credentials" });
-
   } catch (error) {
     console.error("Admin login error:", error);
     return res.status(500).json({ message: "Admin login error" });
