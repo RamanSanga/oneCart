@@ -5,36 +5,34 @@ import axios from 'axios';
 export const adminDataContext = createContext();
 
 function AdminContext({ children }) {
-  const { serverUrl: ctxServerUrl } = useContext(authDataContext) || {};
-  // fallback to your backend default if context not yet set
-  const serverUrl = ctxServerUrl || 'http://localhost:8000';
+  const { serverUrl } = useContext(authDataContext);
 
   const [adminData, setAdminData] = useState(null);
 
   const getAdmin = useCallback(async () => {
     try {
-      const result = await axios.get(`${serverUrl}/api/user/getadmin`, {
-        withCredentials: true, // send cookies
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const result = await axios.get(
+        `${serverUrl}/api/admin/getadmin`,  // ✅ FIXED
+        { withCredentials: true }
+      );
+
       setAdminData(result.data);
-      console.log('getAdmin:', result.data);
+      console.log("getAdmin:", result.data);
+
     } catch (error) {
+      console.error("getAdmin error:", error.message);
       setAdminData(null);
-      // log useful info for debugging
-      console.warn('getAdmin error:', error?.response?.status, error?.response?.data || error.message);
     }
   }, [serverUrl]);
 
   useEffect(() => {
-    // only call when serverUrl is available (or fallback used)
-    getAdmin();
-  }, [getAdmin]);
-
-  const value = { adminData, setAdminData, getAdmin };
+    if (serverUrl) {
+      getAdmin();
+    }
+  }, [getAdmin, serverUrl]);
 
   return (
-    <adminDataContext.Provider value={value}>
+    <adminDataContext.Provider value={{ adminData, setAdminData, getAdmin }}>
       {children}
     </adminDataContext.Provider>
   );
