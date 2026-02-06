@@ -19,7 +19,7 @@ const port = process.env.PORT || 8000;
 
 app.set("trust proxy", 1);
 
-app.use(cookieParser());
+
 
 // ======= CORS (SAFE FOR USER + ADMIN FRONTENDS) =======
 app.use(
@@ -34,6 +34,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(cookieParser());
 // health check
 app.get("/health", (_req, res) => res.send("OK"));
 
