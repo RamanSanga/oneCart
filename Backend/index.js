@@ -27,6 +27,7 @@ app.use(
     origin: [
       "https://onecart-1-frontend32.onrender.com", // user site
       "https://onecart-1-admin3.onrender.com",    // admin site
+      "https://onecart-admin-d1du.onrender.com",
     ],
     credentials: true,
   })
