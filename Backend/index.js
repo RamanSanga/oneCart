@@ -13,6 +13,7 @@ import cartRoutes from "./routes/cartRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import rajorRouter from "./routes/rajorRouter.js";
+import wishlistRoutes from "./routes/wishlistRoutes.js";
 
 const app = express();
 const port = process.env.PORT || 8000;
@@ -46,6 +47,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/order", orderRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/rajor", rajorRouter);
+app.use("/api/wishlist", wishlistRoutes);
 
 // start server
 connectDb()
