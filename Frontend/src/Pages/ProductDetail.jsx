@@ -1,15 +1,24 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { shopDataContext } from "../Context/ShopContext";   // ✅ Capital S
-import RelatedProduct from "../component/relatedProduct";  // ✅ match actual filename
+import axios from "axios";
+import { shopDataContext } from "../Context/ShopContext";
+import { authDataContext } from "../Context/AuthContext";
+import RelatedProduct from "../component/relatedProduct";
 import { Heart } from "lucide-react";
 
 function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { products, currency, addToCart } =
-    useContext(shopDataContext);
+  const {
+    products,
+    currency,
+    addToCart,
+    wishlistItems,
+    getWishlist,      // ✅ backend refresh
+  } = useContext(shopDataContext);
+
+  const { serverUrl } = useContext(authDataContext);
 
   const [productData, setProductData] = useState(null);
   const [image, setImage] = useState("");
@@ -37,38 +46,44 @@ function ProductDetail() {
     }
   }, [productData]);
 
-  /* ================= WISHLIST ================= */
+  /* ================= SYNC WITH BACKEND WISHLIST ================= */
   useEffect(() => {
     if (!productData) return;
 
-    const wishlist = JSON.parse(
-      localStorage.getItem("wishlist") || "[]"
+    const exists = wishlistItems.some(
+      (item) => item._id === productData._id
     );
 
-    setIsWishlisted(wishlist.includes(productData._id));
-  }, [productData]);
+    setIsWishlisted(exists);
+  }, [wishlistItems, productData]);
 
-  const toggleWishlist = () => {
+  /* ================= TOGGLE WISHLIST (BACKEND) ================= */
+  const toggleWishlist = async () => {
     if (!productData) return;
 
-    let wishlist = JSON.parse(
-      localStorage.getItem("wishlist") || "[]"
-    );
+    try {
+      if (isWishlisted) {
+        await axios.post(
+          `${serverUrl}/api/wishlist/remove`,
+          { productId: productData._id },
+          { withCredentials: true }
+        );
+      } else {
+        await axios.post(
+          `${serverUrl}/api/wishlist/add`,
+          { productId: productData._id },
+          { withCredentials: true }
+        );
+      }
 
-    if (wishlist.includes(productData._id)) {
-      wishlist = wishlist.filter(
-        (pid) => pid !== productData._id
-      );
-      setIsWishlisted(false);
-    } else {
-      wishlist.push(productData._id);
-      setIsWishlisted(true);
+      await getWishlist(); // 🔥 refresh global wishlist
+
+    } catch (error) {
+      console.log("Wishlist error:", error?.response?.data || error.message);
     }
-
-    localStorage.setItem("wishlist", JSON.stringify(wishlist));
   };
 
-  /* ================= STOCK HELPERS ================= */
+  /* ================= STOCK HELPER ================= */
   const getStockForSize = (selectedSize) => {
     if (!productData) return 0;
 
@@ -101,7 +116,6 @@ function ProductDetail() {
 
         {/* ================= IMAGES ================= */}
         <div className="flex gap-4">
-          {/* THUMBNAILS */}
           <div className="flex flex-row md:flex-col gap-3">
             {[productData.image1,
               productData.image2,
@@ -128,7 +142,6 @@ function ProductDetail() {
             )}
           </div>
 
-          {/* MAIN IMAGE */}
           <div className="flex-1 h-[420px] md:h-[520px] overflow-hidden bg-gray-100 relative rounded-lg">
             <img
               src={image}
@@ -168,10 +181,10 @@ function ProductDetail() {
 
           <p className="text-gray-600 leading-relaxed">
             {productData.description ||
-              "Premium quality designed for comfort."}
+              "Premium quality designed for comfort."
+            }
           </p>
 
-          {/* SIZE */}
           {productData.sizes?.length > 0 && (
             <div>
               <p className="text-sm uppercase tracking-widest mb-3 text-gray-500">
@@ -205,7 +218,6 @@ function ProductDetail() {
             </div>
           )}
 
-          {/* ACTIONS */}
           <div className="flex gap-4 mt-6">
             <button
               disabled={remainingStock <= 0}
@@ -228,9 +240,7 @@ function ProductDetail() {
               onClick={toggleWishlist}
               className="px-6 py-4 border border-gray-300 uppercase tracking-widest hover:border-black transition"
             >
-              {isWishlisted
-                ? "Wishlisted ♥"
-                : "Add to Wishlist"}
+              {isWishlisted ? "Wishlisted ♥" : "Add to Wishlist"}
             </button>
           </div>
         </div>
@@ -241,7 +251,6 @@ function ProductDetail() {
         currentId={productData._id}
       />
 
-      {/* ================= TOAST ================= */}
       {showCartToast && (
         <div className="fixed bottom-6 right-4 bg-white border shadow-lg p-4">
           <p className="text-sm font-medium">
