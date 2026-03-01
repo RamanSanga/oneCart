@@ -22,6 +22,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    wishlist: {
+  type: [String], // store product IDs
+  default: []
+},
 },
 {
     timestamps : true,
