@@ -6,19 +6,13 @@ export const addToWishlist = async (req, res) => {
   try {
     const { productId } = req.body;
 
-    const user = await User.findById(req.userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    if (user.wishlist.includes(productId)) {
-      return res.status(400).json({ message: "Already in wishlist" });
-    }
-
-    user.wishlist.push(productId);
-    await user.save();
+    await User.findByIdAndUpdate(
+      req.userId,
+      { $addToSet: { wishlist: productId } } // prevents duplicates
+    );
 
     return res.status(200).json({
-      message: "Added to wishlist",
-      wishlist: user.wishlist
+      message: "Added to wishlist"
     });
 
   } catch (error) {
@@ -33,15 +27,13 @@ export const removeFromWishlist = async (req, res) => {
   try {
     const { productId } = req.body;
 
-    const user = await User.findById(req.userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    user.wishlist = user.wishlist.filter(id => id !== productId);
-    await user.save();
+    await User.findByIdAndUpdate(
+      req.userId,
+      { $pull: { wishlist: productId } } // 🔥 correct removal
+    );
 
     return res.status(200).json({
-      message: "Removed from wishlist",
-      wishlist: user.wishlist
+      message: "Removed from wishlist"
     });
 
   } catch (error) {
@@ -56,7 +48,8 @@ export const getWishlist = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
 
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user)
+      return res.status(404).json({ message: "User not found" });
 
     const products = await Product.find({
       _id: { $in: user.wishlist }
