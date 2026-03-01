@@ -8,7 +8,8 @@ import { Heart } from "lucide-react";
 
 function ProductDetail() {
   const { id } = useParams();
-  const { products, currency, addToCart } = useContext(shopDataContext);
+  const { products, currency, addToCart, wishlistItems, getWishlist } =
+    useContext(shopDataContext);
   const { serverUrl } = useContext(authDataContext);
 
   const [showCartToast, setShowCartToast] = useState(false);
@@ -21,7 +22,6 @@ function ProductDetail() {
   const [image4, setImage4] = useState("");
   const [size, setSize] = useState("");
 
-  /* ================= WISHLIST STATE ================= */
   const [isWishlisted, setIsWishlisted] = useState(false);
 
   /* ================= FETCH PRODUCT ================= */
@@ -48,30 +48,16 @@ function ProductDetail() {
     }
   }, [productData]);
 
-  /* ================= CHECK WISHLIST ================= */
+  /* ================= SYNC WISHLIST STATE ================= */
   useEffect(() => {
-    const checkWishlist = async () => {
-      if (!productData) return;
+    if (!productData) return;
 
-      try {
-        const res = await axios.get(
-          `${serverUrl}/api/wishlist/get`,
-          { withCredentials: true }
-        );
+    const exists = wishlistItems.some(
+      (item) => item._id === productData._id
+    );
 
-        const products = res.data.products || [];
-        const exists = products.some(
-          (item) => item._id === productData._id
-        );
-
-        setIsWishlisted(exists);
-      } catch (error) {
-        console.log("Wishlist check error:", error?.response?.data || error.message);
-      }
-    };
-
-    checkWishlist();
-  }, [productData, serverUrl]);
+    setIsWishlisted(exists);
+  }, [wishlistItems, productData]);
 
   /* ================= TOGGLE WISHLIST ================= */
   const toggleWishlist = async () => {
@@ -84,15 +70,15 @@ function ProductDetail() {
           { productId: productData._id },
           { withCredentials: true }
         );
-        setIsWishlisted(false);
       } else {
         await axios.post(
           `${serverUrl}/api/wishlist/add`,
           { productId: productData._id },
           { withCredentials: true }
         );
-        setIsWishlisted(true);
       }
+
+      await getWishlist(); // 🔥 refresh global wishlist
     } catch (error) {
       console.log("Wishlist toggle error:", error?.response?.data || error.message);
     }
@@ -119,7 +105,6 @@ function ProductDetail() {
   const getStockForSize = (s) => {
     const stockObj = normalizeStockObj(productData.stock);
     if (stockObj && s) return Number(stockObj[s] || 0);
-
     if (typeof productData.stock === "number") return productData.stock;
     return 0;
   };
@@ -130,7 +115,7 @@ function ProductDetail() {
     <section className="pt-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20">
 
-        {/* IMAGES */}
+        {/* ================= IMAGES ================= */}
         <div className="flex gap-4">
           <div className="flex flex-row md:flex-col gap-3">
             {[image1, image2, image3, image4].map(
@@ -156,6 +141,7 @@ function ProductDetail() {
               className="w-full h-full object-cover"
             />
 
+            {/* ❤️ HEART */}
             <button
               onClick={toggleWishlist}
               className="absolute top-4 right-4 bg-white/80 backdrop-blur p-2 rounded-full hover:scale-110 transition"
@@ -172,7 +158,7 @@ function ProductDetail() {
           </div>
         </div>
 
-        {/* DETAILS */}
+        {/* ================= DETAILS ================= */}
         <div className="space-y-6">
           <p className="text-sm uppercase tracking-widest text-gray-500">
             {productData.category}
@@ -184,6 +170,12 @@ function ProductDetail() {
             {currency} {productData.price}
           </p>
 
+          <p className="text-gray-600 leading-relaxed">
+            {productData.description ||
+              "Designed with premium materials for everyday comfort."}
+          </p>
+
+          {/* SIZE */}
           {productData.sizes?.length > 0 && (
             <div>
               <p className="text-sm uppercase tracking-widest mb-3 text-gray-500">
@@ -207,6 +199,7 @@ function ProductDetail() {
             </div>
           )}
 
+          {/* ACTIONS */}
           <div className="flex gap-4 mt-6">
             <button
               className="flex-1 py-4 border border-black uppercase tracking-widest text-sm hover:bg-black hover:text-white transition"
@@ -234,6 +227,16 @@ function ProductDetail() {
         category={productData.category}
         currentId={productData._id}
       />
+
+      {/* ================= CART TOAST ================= */}
+      {showCartToast && (
+        <div className="fixed bottom-6 right-4 z-50 w-[300px] bg-white border border-gray-200 shadow-lg p-5">
+          <p className="text-sm font-medium mb-1">Added to your cart</p>
+          <p className="text-xs text-gray-500 mb-3">
+            {productData.name} · Size {size}
+          </p>
+        </div>
+      )}
     </section>
   );
 }
