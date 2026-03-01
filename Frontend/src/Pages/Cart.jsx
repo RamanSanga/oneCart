@@ -57,24 +57,31 @@ function Cart() {
 
   /* ================= MOVE TO WISHLIST (FIXED) ================= */
   const moveToWishlist = async (item) => {
-    try {
-      await axios.post(
-        `${serverUrl}/api/wishlist/add`,
-        { productId: item._id },
-        { withCredentials: true }
-      );
+  try {
+    // 1️⃣ Add to wishlist
+    await axios.post(
+      `${serverUrl}/api/wishlist/add`,
+      { productId: item._id },
+      { withCredentials: true }
+    );
 
-      // remove from cart after successful wishlist add
-      removeCartItem(item._id, item.size);
+    // 2️⃣ Remove from cart in backend
+    await axios.post(
+      `${serverUrl}/api/cart/update`,
+      { itemId: item._id, size: item.size, quantity: 0 },
+      { withCredentials: true }
+    );
 
-    } catch (error) {
-      console.log(
-        "Move to wishlist error:",
-        error?.response?.data || error.message
-      );
-    }
-  };
+    // 3️⃣ Refresh page to sync state
+    window.location.reload();
 
+  } catch (error) {
+    console.log(
+      "Move to wishlist error:",
+      error?.response?.data || error.message
+    );
+  }
+};
   return (
     <section className="pt-[120px] pb-32 bg-white min-h-screen">
       <div className="max-w-7xl mx-auto px-6">
