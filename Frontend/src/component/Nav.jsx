@@ -6,7 +6,7 @@ import {
   FiShoppingBag,
   FiX,
   FiMenu,
-  FiHeart,   // ✅ ADD
+  FiHeart,
 } from "react-icons/fi";
 import axios from "axios";
 
@@ -15,16 +15,20 @@ import { authDataContext } from "../Context/AuthContext";
 import { shopDataContext } from "../Context/ShopContext";
 
 export default function Navbar() {
-  const { showSearch, setShowSearch, search, setSearch, getCartCount } =
-    useContext(shopDataContext);
+  const {
+    showSearch,
+    setShowSearch,
+    search,
+    setSearch,
+    getCartCount,
+    getWishlistCount,   // ✅ from ShopContext
+  } = useContext(shopDataContext);
+
   const { userData, setUserData } = useContext(userDataContext);
   const { serverUrl } = useContext(authDataContext);
 
   const [showMenu, setShowMenu] = useState(false);
   const [showMobileNav, setShowMobileNav] = useState(false);
-
-  // ✅ WISHLIST COUNT
-  const [wishlistCount, setWishlistCount] = useState(0);
 
   const menuRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -37,21 +41,6 @@ export default function Navbar() {
     { label: "ABOUT", path: "/about" },
     { label: "CONTACT", path: "/contact" },
   ];
-
-  // ================= WISHLIST COUNT =================
-  useEffect(() => {
-    const updateWishlistCount = () => {
-      const ids = JSON.parse(localStorage.getItem("wishlist") || "[]");
-      setWishlistCount(ids.length);
-    };
-
-    updateWishlistCount();
-    window.addEventListener("storage", updateWishlistCount);
-
-    return () => {
-      window.removeEventListener("storage", updateWishlistCount);
-    };
-  }, []);
 
   /* AUTO FOCUS SEARCH */
   useEffect(() => {
@@ -90,6 +79,7 @@ export default function Navbar() {
       await axios.get(`${serverUrl}/api/auth/logout`, {
         withCredentials: true,
       });
+
       setUserData(null);
       setShowMenu(false);
       navigate("/");
@@ -104,6 +94,7 @@ export default function Navbar() {
   return (
     <nav className="w-full bg-white/90 backdrop-blur-xl border-b border-gray-200 fixed top-0 left-0 z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-4 md:px-10 py-5">
+        
         {/* LEFT */}
         <div className="flex items-center gap-4">
           <button className="md:hidden" onClick={() => setShowMobileNav(true)}>
@@ -130,6 +121,7 @@ export default function Navbar() {
 
         {/* RIGHT ICONS */}
         <div className="flex items-center gap-6 text-xl">
+          
           {/* SEARCH */}
           <button
             onClick={() => {
@@ -146,15 +138,15 @@ export default function Navbar() {
             <FiSearch />
           </button>
 
-          {/* ❤️ WISHLIST (NEW) */}
+          {/* ❤️ WISHLIST (Backend Synced) */}
           <div
             className="relative cursor-pointer"
             onClick={() => navigate("/wishlist")}
           >
             <FiHeart />
-            {wishlistCount > 0 && (
+            {getWishlistCount() > 0 && (
               <span className="absolute -top-2 -right-3 bg-black text-white text-[10px] px-[6px] rounded-full">
-                {wishlistCount}
+                {getWishlistCount()}
               </span>
             )}
           </div>
@@ -189,13 +181,11 @@ export default function Navbar() {
                       Account
                     </Link>
                     <button
-  data-logout-btn
-  onClick={handleLogout}
-  className="w-full text-left px-4 py-2 hover:bg-gray-100"
->
-  Logout
-</button>
-
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                    >
+                      Logout
+                    </button>
                   </>
                 ) : (
                   <>
@@ -248,7 +238,7 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* MOBILE NAV DRAWER (unchanged) */}
+      {/* MOBILE NAV */}
       {showMobileNav && (
         <div className="fixed inset-0 z-[100] md:hidden">
           <div
@@ -268,7 +258,6 @@ export default function Navbar() {
                   key={item.label}
                   to={item.path}
                   onClick={() => setShowMobileNav(false)}
-                  className="tracking-wide"
                 >
                   {item.label}
                 </Link>
