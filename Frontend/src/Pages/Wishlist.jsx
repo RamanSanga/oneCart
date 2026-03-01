@@ -34,22 +34,29 @@ function Wishlist() {
   }, [serverUrl]);
 
   /* ================= REMOVE FROM WISHLIST ================= */
-  const removeFromWishlist = async (productId) => {
-    try {
-      await axios.post(
-        `${serverUrl}/api/wishlist/remove`,
-        { productId },
-        { withCredentials: true }
-      );
+ export const removeFromWishlist = async (req, res) => {
+  try {
+    const { productId } = req.body;
 
-      setWishlistProducts((prev) =>
-        prev.filter((item) => item._id !== productId)
-      );
-    } catch (error) {
-      console.log("Remove wishlist error:", error?.response?.data || error.message);
-    }
-  };
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
+    user.wishlist = user.wishlist.filter(
+      (id) => id.toString() !== productId
+    );
+
+    await user.save();
+
+    return res.status(200).json({
+      message: "Removed from wishlist",
+      wishlist: user.wishlist
+    });
+
+  } catch (error) {
+    console.log("Wishlist remove error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
   /* ================= STOCK CALCULATION ================= */
   const getTotalStock = (product) => {
     if (typeof product.stock === "number") return product.stock;
