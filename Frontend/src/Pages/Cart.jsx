@@ -1,5 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
+import axios from "axios";
 import { shopDataContext } from "../Context/ShopContext";
+import { authDataContext } from "../Context/AuthContext";
 import { FiMinus, FiPlus, FiTrash2, FiHeart } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 
@@ -15,6 +17,8 @@ function Cart() {
     removeCartItem,
     getCartAmount,
   } = useContext(shopDataContext);
+
+  const { serverUrl } = useContext(authDataContext);
 
   const [cartProducts, setCartProducts] = useState([]);
   const [subTotal, setSubTotal] = useState(0);
@@ -51,31 +55,34 @@ function Cart() {
     calcAmount();
   }, [cartItem, getCartAmount]);
 
-  /* ================= MOVE TO WISHLIST ================= */
-  const moveToWishlist = (item) => {
-    const wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
+  /* ================= MOVE TO WISHLIST (FIXED) ================= */
+  const moveToWishlist = async (item) => {
+    try {
+      await axios.post(
+        `${serverUrl}/api/wishlist/add`,
+        { productId: item._id },
+        { withCredentials: true }
+      );
 
-    // prevent duplicates
-    if (!wishlist.includes(item._id)) {
-      wishlist.push(item._id);
-      localStorage.setItem("wishlist", JSON.stringify(wishlist));
-      window.dispatchEvent(new Event("storage")); // update navbar count
+      // remove from cart after successful wishlist add
+      removeCartItem(item._id, item.size);
+
+    } catch (error) {
+      console.log(
+        "Move to wishlist error:",
+        error?.response?.data || error.message
+      );
     }
-
-    // remove from cart
-    removeCartItem(item._id, item.size);
   };
 
   return (
     <section className="pt-[120px] pb-32 bg-white min-h-screen">
       <div className="max-w-7xl mx-auto px-6">
 
-        {/* TITLE */}
         <h1 className="text-2xl font-light tracking-wide mb-12">
           Shopping Bag
         </h1>
 
-        {/* ================= EMPTY CART ================= */}
         {cartProducts.length === 0 ? (
           <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
             <div className="w-[180px] h-[220px] mb-10 bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
@@ -101,7 +108,6 @@ function Cart() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
 
-            {/* ================= LEFT: ITEMS ================= */}
             <div className="lg:col-span-2 space-y-12">
 
               {cartProducts.map((item) => (
@@ -109,14 +115,12 @@ function Cart() {
                   key={`${item._id}-${item.size}`}
                   className="flex gap-6 border-b border-gray-200 pb-12"
                 >
-                  {/* IMAGE */}
                   <img
                     src={item.image1}
                     alt={item.name}
                     className="w-[120px] h-[160px] object-cover rounded-md"
                   />
 
-                  {/* DETAILS */}
                   <div className="flex-1 flex flex-col justify-between">
                     <div>
                       <p className="text-sm font-medium">
@@ -132,10 +136,8 @@ function Cart() {
                       </p>
                     </div>
 
-                    {/* ACTION BAR */}
                     <div className="flex flex-wrap items-center justify-between mt-6 gap-4">
 
-                      {/* QUANTITY */}
                       <div className="flex items-center gap-4">
                         <button
                           onClick={() => {
@@ -172,10 +174,8 @@ function Cart() {
                         </button>
                       </div>
 
-                      {/* PREMIUM ACTIONS */}
                       <div className="flex items-center gap-6 text-xs uppercase tracking-widest">
 
-                        {/* 🤍 MOVE TO WISHLIST */}
                         <button
                           onClick={() => moveToWishlist(item)}
                           className="flex items-center gap-2 text-gray-500 hover:text-black transition"
@@ -184,7 +184,6 @@ function Cart() {
                           <span>Move to Wishlist</span>
                         </button>
 
-                        {/* 🗑 REMOVE */}
                         <button
                           onClick={() =>
                             removeCartItem(item._id, item.size)
@@ -202,7 +201,6 @@ function Cart() {
               ))}
             </div>
 
-            {/* ================= RIGHT: SUMMARY ================= */}
             <div className="border border-gray-200 p-8 h-fit">
               <p className="text-sm tracking-wide uppercase mb-6">
                 Order Summary
