@@ -58,20 +58,56 @@ function ShopContext({ children }) {
         { withCredentials: true }
       );
       setCartItemState(result.data?.cartData || {});
-    } catch {}
+    } catch (err) {
+      console.log("Cart fetch error:", err?.message);
+    }
   };
 
   const addToCart = async (itemId, size) => {
     if (!userData) return;
+
     try {
       const res = await axios.post(
         `${serverUrl}/api/cart/add`,
         { itemId, size },
         { withCredentials: true }
       );
+
       setCartItemState(res.data.cartData || {});
     } catch (err) {
-      console.log(err?.response?.data);
+      console.log("Add to cart error:", err?.response?.data);
+    }
+  };
+
+  const updateQuantity = async (itemId, size, quantity) => {
+    if (!userData) return;
+
+    try {
+      const res = await axios.post(
+        `${serverUrl}/api/cart/update`,
+        { itemId, size, quantity },
+        { withCredentials: true }
+      );
+
+      setCartItemState(res.data.cartData || {});
+    } catch (err) {
+      console.log("Update quantity error:", err?.response?.data);
+    }
+  };
+
+  const removeCartItem = async (itemId, size) => {
+    if (!userData) return;
+
+    try {
+      const res = await axios.post(
+        `${serverUrl}/api/cart/update`,
+        { itemId, size, quantity: 0 },
+        { withCredentials: true }
+      );
+
+      setCartItemState(res.data.cartData || {});
+    } catch (err) {
+      console.log("Remove cart item error:", err?.response?.data);
     }
   };
 
@@ -83,6 +119,22 @@ function ShopContext({ children }) {
       }
     }
     return total;
+  };
+
+  const getCartAmount = async () => {
+    let totalAmount = 0;
+
+    for (const productId in cartItem) {
+      const product = products.find((p) => p._id === productId);
+      if (!product) continue;
+
+      for (const size in cartItem[productId]) {
+        const qty = cartItem[productId][size];
+        totalAmount += product.price * qty;
+      }
+    }
+
+    return totalAmount;
   };
 
   /* ================= EFFECTS ================= */
@@ -110,6 +162,9 @@ function ShopContext({ children }) {
     setShowSearch,
     cartItem,
     addToCart,
+    updateQuantity,
+    removeCartItem,
+    getCartAmount,
     getCartCount,
     wishlistItems,
     getWishlist,
