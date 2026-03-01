@@ -1,46 +1,83 @@
 import React, { useContext, useEffect, useState } from "react";
-import { shopDataContext } from "../Context/ShopContext";
+import axios from "axios";
 import { Heart, ShoppingBag, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { shopDataContext } from "../Context/ShopContext";
+import { authDataContext } from "../Context/AuthContext";
 
 function Wishlist() {
-  const { products, currency, addToCart } = useContext(shopDataContext);
   const navigate = useNavigate();
+  const { currency, addToCart } = useContext(shopDataContext);
+  const { serverUrl } = useContext(authDataContext);
 
-  const [wishlistIds, setWishlistIds] = useState([]);
   const [wishlistProducts, setWishlistProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // ================= LOAD WISHLIST =================
+  /* ================= LOAD WISHLIST FROM BACKEND ================= */
   useEffect(() => {
-    const ids = JSON.parse(localStorage.getItem("wishlist") || "[]");
-    setWishlistIds(ids);
-  }, []);
+    const fetchWishlist = async () => {
+      try {
+        const res = await axios.get(
+          `${serverUrl}/api/wishlist/get`,
+          { withCredentials: true }
+        );
 
-  // ================= MAP TO PRODUCTS =================
-  useEffect(() => {
-    if (!products || products.length === 0) return;
+        setWishlistProducts(res.data.products || []);
+      } catch (error) {
+        console.log("Wishlist fetch error:", error?.response?.data || error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    const items = products.filter((p) => wishlistIds.includes(p._id));
-    setWishlistProducts(items);
-  }, [wishlistIds, products]);
+    fetchWishlist();
+  }, [serverUrl]);
 
-  // ================= HELPERS =================
-  const removeFromWishlist = (id) => {
-    const updated = wishlistIds.filter((pid) => pid !== id);
-    setWishlistIds(updated);
-    localStorage.setItem("wishlist", JSON.stringify(updated));
+  /* ================= REMOVE FROM WISHLIST ================= */
+  const removeFromWishlist = async (productId) => {
+    try {
+      await axios.post(
+        `${serverUrl}/api/wishlist/remove`,
+        { productId },
+        { withCredentials: true }
+      );
+
+      setWishlistProducts((prev) =>
+        prev.filter((item) => item._id !== productId)
+      );
+    } catch (error) {
+      console.log("Remove wishlist error:", error?.response?.data || error.message);
+    }
   };
 
+  /* ================= STOCK CALCULATION ================= */
   const getTotalStock = (product) => {
     if (typeof product.stock === "number") return product.stock;
+
     if (product.stock && typeof product.stock === "object") {
       const plain = product.stock.toObject
         ? product.stock.toObject()
         : { ...product.stock };
-      return Object.values(plain).reduce((s, v) => s + (Number(v) || 0), 0);
+
+      return Object.values(plain).reduce(
+        (sum, val) => sum + (Number(val) || 0),
+        0
+      );
     }
+
     return 0;
   };
+
+  /* ================= LOADING STATE ================= */
+  if (loading) {
+    return (
+      <section className="pt-[120px] pb-32 bg-[#fafafa] min-h-screen flex justify-center items-center">
+        <p className="text-gray-500 text-sm tracking-wide">
+          Loading your wishlist...
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="pt-[120px] pb-32 bg-[#fafafa] min-h-screen">
@@ -62,12 +99,15 @@ function Wishlist() {
             <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-6">
               <Heart size={32} className="text-gray-400" />
             </div>
+
             <h2 className="text-xl font-light mb-2">
               Your wishlist is empty
             </h2>
+
             <p className="text-sm text-gray-500 mb-8 max-w-md">
               Save your favorite styles to your wishlist and come back anytime.
             </p>
+
             <button
               onClick={() => navigate("/collection")}
               className="px-8 py-3 border border-black uppercase tracking-widest text-xs hover:bg-black hover:text-white transition"
@@ -83,16 +123,12 @@ function Wishlist() {
             {wishlistProducts.map((item) => {
               const totalStock = getTotalStock(item);
               const lowStock =
-                typeof totalStock === "number" &&
-                totalStock > 0 &&
-                totalStock <= 3;
+                totalStock > 0 && totalStock <= 3;
 
               return (
-                <div
-                  key={item._id}
-                  className="group relative"
-                >
-                  {/* REMOVE */}
+                <div key={item._id} className="group relative">
+
+                  {/* REMOVE BUTTON */}
                   <button
                     onClick={() => removeFromWishlist(item._id)}
                     className="absolute top-4 right-4 z-20 bg-white/80 backdrop-blur rounded-full p-2 opacity-0 group-hover:opacity-100 transition"
@@ -108,7 +144,7 @@ function Wishlist() {
                     </div>
                   )}
 
-                  {/* OUT OF STOCK */}
+                  {/* OUT OF STOCK OVERLAY */}
                   {totalStock <= 0 && (
                     <div className="absolute inset-0 z-10 bg-white/80 flex items-center justify-center text-red-600 text-sm font-medium">
                       Out of stock
@@ -117,9 +153,7 @@ function Wishlist() {
 
                   {/* IMAGE */}
                   <div
-                    onClick={() =>
-                      navigate(`/productdetail/${item._id}`)
-                    }
+                    onClick={() => navigate(`/productdetail/${item._id}`)}
                     className="cursor-pointer overflow-hidden bg-gray-100 rounded-lg"
                   >
                     <img
@@ -132,9 +166,7 @@ function Wishlist() {
                   {/* INFO */}
                   <div className="mt-4 space-y-1">
                     <p
-                      onClick={() =>
-                        navigate(`/productdetail/${item._id}`)
-                      }
+                      onClick={() => navigate(`/productdetail/${item._id}`)}
                       className="text-sm font-light tracking-wide text-gray-800 cursor-pointer hover:underline"
                     >
                       {item.name}
@@ -150,7 +182,6 @@ function Wishlist() {
                     <button
                       disabled={totalStock <= 0}
                       onClick={() => {
-                        // choose first size by default (premium UX)
                         const defaultSize = item.sizes?.[0];
                         if (!defaultSize) return;
                         addToCart(item._id, defaultSize);
@@ -170,6 +201,7 @@ function Wishlist() {
                       View
                     </button>
                   </div>
+
                 </div>
               );
             })}
