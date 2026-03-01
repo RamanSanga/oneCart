@@ -28,7 +28,7 @@ function ShopContext({ children }) {
     try {
       const result = await axios.get(`${serverUrl}/api/product/list`);
       setProducts(result.data?.products || result.data || []);
-    } catch (error) {
+    } catch {
       setProducts([]);
     }
   };
@@ -63,7 +63,6 @@ function ShopContext({ children }) {
 
   const addToCart = async (itemId, size) => {
     if (!userData) return;
-
     try {
       const res = await axios.post(
         `${serverUrl}/api/cart/add`,
