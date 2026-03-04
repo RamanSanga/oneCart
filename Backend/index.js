@@ -23,16 +23,23 @@ app.set("trust proxy", 1);
 
 
 // ======= CORS (SAFE FOR USER + ADMIN FRONTENDS) =======
+const allowedOrigins = [
+  "https://onecart-1-frontend32.onrender.com",
+  "https://onecart-1-admin3.onrender.com",
+  "https://onecart-admin-d1du.onrender.com"
+];
+
 app.use(
   cors({
-    origin: [
-      "https://onecart-1-frontend32.onrender.com", // user site
-      "https://onecart-1-admin3.onrender.com",    // admin site
-      "https://onecart-admin-d1du.onrender.com",
-    ],
+    origin: allowedOrigins,
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// important for preflight requests
+app.options("*", cors());
 
 app.use(express.json());
 app.use(cookieParser());
