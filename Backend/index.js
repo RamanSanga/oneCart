@@ -20,9 +20,7 @@ const port = process.env.PORT || 8000;
 
 app.set("trust proxy", 1);
 
-
-
-// ======= CORS (SAFE FOR USER + ADMIN FRONTENDS) =======
+/* ===== CORS (MUST BE FIRST MIDDLEWARE) ===== */
 const allowedOrigins = [
   "https://onecart-1-frontend32.onrender.com",
   "https://onecart-1-admin3.onrender.com",
@@ -32,19 +30,18 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: allowedOrigins,
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true
   })
 );
 
-
+/* ===== OTHER MIDDLEWARE ===== */
 app.use(express.json());
 app.use(cookieParser());
-// health check
+
+/* ===== HEALTH CHECK ===== */
 app.get("/health", (_req, res) => res.send("OK"));
 
-// routes (UNCHANGED)
+/* ===== ROUTES ===== */
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/product", productRoutes);
@@ -54,7 +51,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/rajor", rajorRouter);
 app.use("/api/wishlist", wishlistRoutes);
 
-// start server
+/* ===== START SERVER ===== */
 connectDb()
   .then(() => {
     app.listen(port, () => {
