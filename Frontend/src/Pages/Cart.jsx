@@ -23,7 +23,17 @@ function Cart() {
   const [cartProducts, setCartProducts] = useState([]);
   const [subTotal, setSubTotal] = useState(0);
 
+  /* ================= PREMIUM TOAST ================= */
+
+  const [toast, setToast] = useState("");
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3000);
+  };
+
   /* ================= BUILD CART PRODUCTS ================= */
+
   useEffect(() => {
     const items = [];
 
@@ -33,6 +43,7 @@ function Cart() {
 
       for (const size in cartItem[productId]) {
         const qty = cartItem[productId][size];
+
         if (qty > 0) {
           items.push({
             ...product,
@@ -47,43 +58,54 @@ function Cart() {
   }, [cartItem, products]);
 
   /* ================= SUBTOTAL ================= */
+
   useEffect(() => {
     const calcAmount = async () => {
       const amount = await getCartAmount();
       setSubTotal(amount);
     };
+
     calcAmount();
   }, [cartItem, getCartAmount]);
 
-  /* ================= MOVE TO WISHLIST (FIXED) ================= */
+  /* ================= MOVE TO WISHLIST ================= */
+
   const moveToWishlist = async (item) => {
-  try {
-    // 1️⃣ Add to wishlist
-    await axios.post(
-      `${serverUrl}/api/wishlist/add`,
-      { productId: item._id },
-      { withCredentials: true }
-    );
+    try {
+      await axios.post(
+        `${serverUrl}/api/wishlist/add`,
+        { productId: item._id },
+        { withCredentials: true }
+      );
 
-    // 2️⃣ Remove from cart in backend
-    await axios.post(
-      `${serverUrl}/api/cart/update`,
-      { itemId: item._id, size: item.size, quantity: 0 },
-      { withCredentials: true }
-    );
+      await axios.post(
+        `${serverUrl}/api/cart/update`,
+        { itemId: item._id, size: item.size, quantity: 0 },
+        { withCredentials: true }
+      );
 
-    // 3️⃣ Refresh page to sync state
-    window.location.reload();
+      window.location.reload();
 
-  } catch (error) {
-    console.log(
-      "Move to wishlist error:",
-      error?.response?.data || error.message
-    );
-  }
-};
+    } catch (error) {
+      showToast("Unable to move item to wishlist");
+    }
+  };
+
   return (
     <section className="pt-[120px] pb-32 bg-white min-h-screen">
+
+      {/* PREMIUM TOAST */}
+      {toast && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50
+        bg-white border border-gray-200 shadow-xl
+        px-6 py-3 text-sm tracking-wide
+        max-w-[90%] sm:max-w-sm text-center">
+
+          {toast}
+
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-6">
 
         <h1 className="text-2xl font-light tracking-wide mb-12">
@@ -91,7 +113,9 @@ function Cart() {
         </h1>
 
         {cartProducts.length === 0 ? (
+
           <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
+
             <div className="w-[180px] h-[220px] mb-10 bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
               Empty Bag
             </div>
@@ -110,7 +134,9 @@ function Cart() {
             >
               Explore Collection
             </button>
+
           </div>
+
         ) : (
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
@@ -118,10 +144,12 @@ function Cart() {
             <div className="lg:col-span-2 space-y-12">
 
               {cartProducts.map((item) => (
+
                 <div
                   key={`${item._id}-${item.size}`}
                   className="flex gap-6 border-b border-gray-200 pb-12"
                 >
+
                   <img
                     src={item.image1}
                     alt={item.name}
@@ -129,7 +157,9 @@ function Cart() {
                   />
 
                   <div className="flex-1 flex flex-col justify-between">
+
                     <div>
+
                       <p className="text-sm font-medium">
                         {item.name}
                       </p>
@@ -141,11 +171,13 @@ function Cart() {
                       <p className="text-sm mt-2">
                         {currency}{item.price}
                       </p>
+
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between mt-6 gap-4">
 
                       <div className="flex items-center gap-4">
+
                         <button
                           onClick={() => {
                             if (item.quantity === 1) {
@@ -168,17 +200,24 @@ function Cart() {
                         </span>
 
                         <button
-                          onClick={() =>
-                            updateQuantity(
+                          onClick={async () => {
+
+                            const result = await updateQuantity(
                               item._id,
                               item.size,
                               item.quantity + 1
-                            )
-                          }
+                            );
+
+                            if (result && !result.success) {
+                              showToast(result.message);
+                            }
+
+                          }}
                           className="border px-2 py-1 hover:bg-gray-100"
                         >
                           <FiPlus />
                         </button>
+
                       </div>
 
                       <div className="flex items-center gap-6 text-xs uppercase tracking-widest">
@@ -202,13 +241,19 @@ function Cart() {
                         </button>
 
                       </div>
+
                     </div>
+
                   </div>
+
                 </div>
+
               ))}
+
             </div>
 
             <div className="border border-gray-200 p-8 h-fit">
+
               <p className="text-sm tracking-wide uppercase mb-6">
                 Order Summary
               </p>
@@ -240,7 +285,9 @@ function Cart() {
             </div>
 
           </div>
+
         )}
+
       </div>
     </section>
   );
