@@ -24,6 +24,7 @@ function ShopContext({ children }) {
   const delivery_fee = 40;
 
   /* ================= PRODUCTS ================= */
+
   const getProducts = async () => {
     try {
       const result = await axios.get(`${serverUrl}/api/product/list`);
@@ -34,13 +35,16 @@ function ShopContext({ children }) {
   };
 
   /* ================= WISHLIST ================= */
+
   const getWishlist = async () => {
     if (!userData) return;
+
     try {
       const res = await axios.get(
         `${serverUrl}/api/wishlist/get`,
         { withCredentials: true }
       );
+
       setWishlistItems(res.data.products || []);
     } catch (err) {
       console.log("Wishlist error:", err?.message);
@@ -50,13 +54,16 @@ function ShopContext({ children }) {
   const getWishlistCount = () => wishlistItems.length;
 
   /* ================= CART ================= */
+
   const getUserCart = async () => {
     if (!userData) return;
+
     try {
       const result = await axios.get(
         `${serverUrl}/api/cart/get`,
         { withCredentials: true }
       );
+
       setCartItemState(result.data?.cartData || {});
     } catch (err) {
       console.log("Cart fetch error:", err?.message);
@@ -80,28 +87,26 @@ function ShopContext({ children }) {
   };
 
   const updateQuantity = async (itemId, size, quantity) => {
-  if (!userData) return { success: false };
+    if (!userData) return { success: false };
 
-  try {
-    const res = await axios.post(
-      `${serverUrl}/api/cart/update`,
-      { itemId, size, quantity },
-      { withCredentials: true }
-    );
+    try {
+      const res = await axios.post(
+        `${serverUrl}/api/cart/update`,
+        { itemId, size, quantity },
+        { withCredentials: true }
+      );
 
-    setCartItemState(res.data.cartData || {});
+      setCartItemState(res.data.cartData || {});
 
-    return { success: true };
+      return { success: true };
 
-  } catch (err) {
-
-    return {
-      success: false,
-      message: err?.response?.data?.message || "Update failed",
-    };
-
-  }
-};
+    } catch (err) {
+      return {
+        success: false,
+        message: err?.response?.data?.message || "Update failed",
+      };
+    }
+  };
 
   const removeCartItem = async (itemId, size) => {
     if (!userData) return;
@@ -121,11 +126,13 @@ function ShopContext({ children }) {
 
   const getCartCount = () => {
     let total = 0;
+
     for (const id in cartItem) {
       for (const size in cartItem[id]) {
         total += cartItem[id][size];
       }
     }
+
     return total;
   };
 
@@ -146,6 +153,7 @@ function ShopContext({ children }) {
   };
 
   /* ================= EFFECTS ================= */
+
   useEffect(() => {
     getProducts();
   }, [serverUrl]);
@@ -164,16 +172,22 @@ function ShopContext({ children }) {
     products,
     currency,
     delivery_fee,
+
     search,
     setSearch,
     showSearch,
     setShowSearch,
+
     cartItem,
+    setCartItem: setCartItemState, 
+
     addToCart,
     updateQuantity,
     removeCartItem,
+
     getCartAmount,
     getCartCount,
+
     wishlistItems,
     getWishlist,
     getWishlistCount,
