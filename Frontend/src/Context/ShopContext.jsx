@@ -80,20 +80,28 @@ function ShopContext({ children }) {
   };
 
   const updateQuantity = async (itemId, size, quantity) => {
-    if (!userData) return;
+  if (!userData) return { success: false };
 
-    try {
-      const res = await axios.post(
-        `${serverUrl}/api/cart/update`,
-        { itemId, size, quantity },
-        { withCredentials: true }
-      );
+  try {
+    const res = await axios.post(
+      `${serverUrl}/api/cart/update`,
+      { itemId, size, quantity },
+      { withCredentials: true }
+    );
 
-      setCartItemState(res.data.cartData || {});
-    } catch (err) {
-      console.log("Update quantity error:", err?.response?.data);
-    }
-  };
+    setCartItemState(res.data.cartData || {});
+
+    return { success: true };
+
+  } catch (err) {
+
+    return {
+      success: false,
+      message: err?.response?.data?.message || "Update failed",
+    };
+
+  }
+};
 
   const removeCartItem = async (itemId, size) => {
     if (!userData) return;
