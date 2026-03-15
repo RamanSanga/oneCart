@@ -7,7 +7,6 @@ import Product from "../model/productModel.js";
 function normalizeStockMap(stock) {
   if (!stock) return {};
 
-  // If string → JSON
   if (typeof stock === "string") {
     try {
       stock = JSON.parse(stock);
@@ -16,7 +15,6 @@ function normalizeStockMap(stock) {
     }
   }
 
-  // Must be object map
   if (typeof stock !== "object" || Array.isArray(stock)) return {};
 
   const out = {};
@@ -29,6 +27,7 @@ function normalizeStockMap(stock) {
 
 function parseSizesInput(sizes) {
   if (!sizes) return [];
+
   if (typeof sizes === "string") {
     try {
       return JSON.parse(sizes);
@@ -36,6 +35,7 @@ function parseSizesInput(sizes) {
       return [];
     }
   }
+
   return Array.isArray(sizes) ? sizes : [];
 }
 
@@ -55,38 +55,54 @@ export const addProduct = async (req, res) => {
       bestSeller,
     } = req.body;
 
-    if (!name || !price) {
-      return res.status(400).json({ message: "Name and price are required" });
+    if (!name?.trim() || !price) {
+      return res.status(400).json({
+        success: false,
+        message: "Name and price are required",
+      });
     }
 
-    if (!req.files || !req.files.image1) {
-      return res.status(400).json({ message: "At least 1 image is required" });
+    if (!req.files || !req.files.image1 || !req.files.image1[0]) {
+      return res.status(400).json({
+        success: false,
+        message: "At least 1 image is required",
+      });
     }
-
-    // Upload images
-    const image1 = await uploadOnCloudinary(req.files.image1[0].path);
-    const image2 = req.files.image2
-      ? await uploadOnCloudinary(req.files.image2[0].path)
-      : null;
-    const image3 = req.files.image3
-      ? await uploadOnCloudinary(req.files.image3[0].path)
-      : null;
-    const image4 = req.files.image4
-      ? await uploadOnCloudinary(req.files.image4[0].path)
-      : null;
 
     const parsedSizes = parseSizesInput(sizes);
+
+    if (!parsedSizes.length) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one size is required",
+      });
+    }
+
     const normalizedStock = normalizeStockMap(stock);
 
-    // 🔒 SECURITY: Only keep stock for selected sizes
     const finalStock = {};
     parsedSizes.forEach((s) => {
       finalStock[s] = normalizedStock[s] || 0;
     });
 
+    // Upload images to Cloudinary
+    const image1 = await uploadOnCloudinary(req.files.image1[0].path);
+
+    const image2 = req.files.image2?.[0]
+      ? await uploadOnCloudinary(req.files.image2[0].path)
+      : null;
+
+    const image3 = req.files.image3?.[0]
+      ? await uploadOnCloudinary(req.files.image3[0].path)
+      : null;
+
+    const image4 = req.files.image4?.[0]
+      ? await uploadOnCloudinary(req.files.image4[0].path)
+      : null;
+
     const product = await Product.create({
-      name,
-      description,
+      name: name.trim(),
+      description: description?.trim() || "",
       price: Number(price),
       stock: finalStock,
       category,
@@ -99,10 +115,17 @@ export const addProduct = async (req, res) => {
       image4,
     });
 
-    return res.status(201).json(product);
+    return res.status(201).json({
+      success: true,
+      message: "Product added successfully",
+      product,
+    });
   } catch (error) {
     console.error("Add Product Error:", error);
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to add product",
+    });
   }
 };
 
@@ -112,10 +135,16 @@ export const addProduct = async (req, res) => {
 export const listProduct = async (req, res) => {
   try {
     const products = await Product.find({});
-    return res.status(200).json(products);
+    return res.status(200).json({
+      success: true,
+      products,
+    });
   } catch (error) {
     console.error("List Product Error:", error);
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -125,64 +154,90 @@ export const listProduct = async (req, res) => {
 export const removeProduct = async (req, res) => {
   try {
     const { id } = req.params;
+
     const product = await Product.findByIdAndDelete(id);
+
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
     }
-    return res.status(200).json(product);
+
+    return res.status(200).json({
+      success: true,
+      message: "Product removed successfully",
+      product,
+    });
   } catch (error) {
     console.error("Remove Product Error:", error);
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
 // ----------------------------
 // UPDATE STOCK (ADMIN)
 // ----------------------------
-// ...existing code...
-// ...existing code...
-// ...existing code...
 export const updateProductStock = async (req, res) => {
   try {
     const { id, size, stock } = req.body;
-    if (!id) return res.status(400).json({ message: "Product id required" });
 
-    // Load full document so we never run dot-updates against a numeric 'stock'
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Product id required",
+      });
+    }
+
     const product = await Product.findById(id);
-    if (!product) return res.status(404).json({ message: "Product not found" });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
 
     // ---- single size update ----
     if (size) {
       const safeStock = Math.max(0, Number(stock) || 0);
 
-      // If legacy numeric stock exists, convert to object and set the new size
       if (typeof product.stock === "number") {
         product.stock = { [size]: safeStock };
       } else if (product.stock && typeof product.stock.set === "function") {
-        // Mongoose Map
         product.stock.set(size, safeStock);
-      } else if (product.stock && typeof product.stock === "object" && !Array.isArray(product.stock)) {
-        // plain object
+      } else if (
+        product.stock &&
+        typeof product.stock === "object" &&
+        !Array.isArray(product.stock)
+      ) {
         product.stock = { ...(product.stock || {}), [size]: safeStock };
       } else {
         product.stock = { [size]: safeStock };
       }
 
-      // Ensure sizes array contains the size
       product.sizes = Array.isArray(product.sizes)
         ? Array.from(new Set([...(product.sizes || []), size]))
         : [size];
 
-      // Make sure Mongoose notices changes to plain object
       product.markModified && product.markModified("stock");
 
       await product.save();
-      return res.status(200).json(product);
+
+      return res.status(200).json({
+        success: true,
+        message: "Stock updated successfully",
+        product,
+      });
     }
 
-    // ---- bulk replace of stock (object JSON or numeric) ----
+    // ---- bulk replace of stock ----
     if (stock !== undefined) {
       let normalized;
+
       if (typeof stock === "string") {
         try {
           normalized = JSON.parse(stock);
@@ -199,23 +254,31 @@ export const updateProductStock = async (req, res) => {
         product.sizes = Object.keys(normalized);
         product.markModified && product.markModified("stock");
       } else {
-        // numeric or other fallback
         product.stock = normalized;
         if (typeof normalized === "number") product.sizes = [];
       }
 
       await product.save();
-      return res.status(200).json(product);
+
+      return res.status(200).json({
+        success: true,
+        message: "Stock updated successfully",
+        product,
+      });
     }
 
-    return res.status(400).json({ message: "Nothing to update" });
+    return res.status(400).json({
+      success: false,
+      message: "Nothing to update",
+    });
   } catch (error) {
     console.error("Update Stock Error:", error);
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
-// ...existing code...
-
 
 // ----------------------------
 // UPDATE PRODUCT PRICE (ADMIN)
@@ -225,12 +288,19 @@ export const updateProductPrice = async (req, res) => {
     const { id, price } = req.body;
 
     if (!id || price === undefined) {
-      return res.status(400).json({ message: "Product id and price required" });
+      return res.status(400).json({
+        success: false,
+        message: "Product id and price required",
+      });
     }
 
     const safePrice = Number(price);
+
     if (isNaN(safePrice) || safePrice <= 0) {
-      return res.status(400).json({ message: "Invalid price" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid price",
+      });
     }
 
     const product = await Product.findByIdAndUpdate(
@@ -240,12 +310,22 @@ export const updateProductPrice = async (req, res) => {
     );
 
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
     }
 
-    return res.status(200).json(product);
+    return res.status(200).json({
+      success: true,
+      message: "Price updated successfully",
+      product,
+    });
   } catch (error) {
     console.error("Update Price Error:", error);
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
