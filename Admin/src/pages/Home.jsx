@@ -1,8 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import Nav from "../component/Nav.jsx";
-import Sidebar from "../component/Sidebar.jsx";
 import { authDataContext } from "../context/AuthContext";
 
 function Home() {
@@ -18,7 +16,6 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  /* ================= FETCH DASHBOARD STATS ================= */
   const fetchStats = async () => {
     try {
       setLoading(true);
@@ -30,7 +27,6 @@ function Home() {
 
       console.log("Dashboard stats response:", res.data);
 
-      // Flexible handling in case backend returns different shapes
       if (res.data?.success === false) {
         setError(res.data?.message || "Failed to load dashboard stats");
         setStats({
@@ -97,16 +93,8 @@ function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8f8f6] text-black">
-      <Nav />
-      <Sidebar />
-
-      {/* 
-        NOTE:
-        ml-[80px] kept because your Sidebar likely uses fixed width.
-        On mobile we remove left margin to avoid layout breaking.
-      */}
-      <main className="pt-[90px] sm:pt-[100px] px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 ml-0 md:ml-[80px] transition-all duration-300">
+    <div className="w-full bg-[#f8f8f6] text-black">
+      <main className="px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-5 sm:py-6 md:py-8">
         {/* PAGE HEADER */}
         <section className="mb-8 sm:mb-10 md:mb-12">
           <p className="text-[10px] sm:text-xs tracking-[0.35em] sm:tracking-[0.45em] text-gray-500 uppercase mb-3">
@@ -132,7 +120,7 @@ function Home() {
           </div>
         </section>
 
-        {/* HERO SECTION - Premium minimal */}
+        {/* HERO SECTION - keep old premium tone */}
         <section className="mb-8 sm:mb-10 md:mb-14">
           <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-black/5 bg-white">
             <div className="absolute inset-0 bg-gradient-to-br from-white via-[#f7f7f5] to-[#efefeb]" />
@@ -144,7 +132,9 @@ function Home() {
               <div className="max-w-3xl">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light leading-tight tracking-[0.02em]">
                   Welcome back,
-                  <span className="block mt-1 sm:mt-2 font-normal">Manage One Cart with elegance.</span>
+                  <span className="block mt-1 sm:mt-2 font-normal">
+                    Manage One Cart with elegance.
+                  </span>
                 </h2>
 
                 <p className="mt-4 sm:mt-5 text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed">
@@ -156,7 +146,7 @@ function Home() {
           </div>
         </section>
 
-        {/* ERROR STATE */}
+        {/* ERROR */}
         {error && (
           <section className="mb-8">
             <div className="border border-red-200 bg-red-50 text-red-700 rounded-2xl px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -171,7 +161,7 @@ function Home() {
           </section>
         )}
 
-        {/* STATS SECTION */}
+        {/* STATS */}
         <section className="mb-10 sm:mb-12 md:mb-16">
           <p className="text-[10px] sm:text-xs tracking-[0.35em] sm:tracking-[0.45em] uppercase text-gray-500 mb-5 sm:mb-6">
             Overview
