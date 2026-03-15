@@ -55,6 +55,9 @@ export const addProduct = async (req, res) => {
       bestSeller,
     } = req.body;
 
+    console.log("REQ BODY:", req.body);
+    console.log("REQ FILES:", req.files);
+
     if (!name?.trim() || !price) {
       return res.status(400).json({
         success: false,
@@ -85,7 +88,7 @@ export const addProduct = async (req, res) => {
       finalStock[s] = normalizedStock[s] || 0;
     });
 
-    // Upload images to Cloudinary
+    // Upload images
     const image1 = await uploadOnCloudinary(req.files.image1[0].path);
 
     const image2 = req.files.image2?.[0]
@@ -121,7 +124,7 @@ export const addProduct = async (req, res) => {
       product,
     });
   } catch (error) {
-    console.error("Add Product Error:", error);
+    console.error("Add Product Error FULL:", error);
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to add product",
