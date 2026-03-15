@@ -1,9 +1,13 @@
 import React, { useState, useContext } from "react";
 import axios from "axios";
-import Nav from "../component/Nav.jsx";
-import SideBar from "../component/Sidebar.jsx";
 import uploadIcon from "../assets/upload.png";
 import { authDataContext } from "../context/AuthContext.jsx";
+import {
+  FiUploadCloud,
+  FiImage,
+  FiCheckSquare,
+  FiBox,
+} from "react-icons/fi";
 
 function Add() {
   const { serverUrl } = useContext(authDataContext);
@@ -25,8 +29,6 @@ function Add() {
 
   const [bestSeller, setBestSeller] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // ================= HANDLERS =================
 
   const toggleSize = (size) => {
     setSizes((prev) => {
@@ -51,8 +53,6 @@ function Add() {
       return copy;
     });
   };
-
-  // ================= SUBMIT =================
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
@@ -89,7 +89,6 @@ function Add() {
         withCredentials: true,
       });
 
-      // RESET
       setName("");
       setDescription("");
       setPrice("");
@@ -109,164 +108,253 @@ function Add() {
     }
   };
 
-  // ================= UI =================
-
   return (
-    <div className="min-h-screen bg-[#f7f7f7]">
-      <Nav />
-      <SideBar />
-
-      <div className="ml-[80px] pt-[90px] px-4 sm:px-6 lg:px-12 max-w-[1400px] mx-auto">
+    <div className="w-full min-h-screen bg-[#f7f7f3]">
+      <main className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-6 sm:py-8 lg:py-10">
         {/* HEADER */}
-        <div className="mb-14">
-          <h1 className="text-xl sm:text-2xl font-light tracking-[0.35em]">
-            ADD PRODUCT
+        <section className="mb-8 sm:mb-10 lg:mb-12">
+          <p className="text-[10px] sm:text-xs tracking-[0.35em] uppercase text-gray-500 mb-2">
+            Product Management
+          </p>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-light tracking-[0.03em] uppercase">
+            Add Product
           </h1>
-          <div className="w-20 h-[2px] bg-black mt-4" />
-        </div>
+          <p className="text-sm sm:text-base text-gray-500 mt-3 max-w-2xl">
+            Create a premium catalog entry with product images, pricing, size
+            availability, and inventory settings.
+          </p>
+        </section>
 
         <form
           onSubmit={handleAddProduct}
-          className="bg-white rounded-3xl shadow-sm border p-6 sm:p-10 lg:p-14 space-y-16"
+          className="rounded-3xl border border-black/5 bg-white p-5 sm:p-6 md:p-8 lg:p-10 xl:p-12 shadow-[0_10px_35px_rgba(0,0,0,0.035)] space-y-8 sm:space-y-10 lg:space-y-12"
         >
-          {/* ================= IMAGES ================= */}
+          {/* IMAGES */}
           <section>
-            <p className="text-xs tracking-[0.3em] font-medium mb-6">
-              PRODUCT IMAGES
-            </p>
+            <div className="flex items-center gap-3 mb-5 sm:mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-[#f7f7f3] border border-black/5 flex items-center justify-center">
+                <FiImage className="text-lg" />
+              </div>
+              <div>
+                <p className="text-xs tracking-[0.28em] uppercase text-gray-500">
+                  Product Images
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Upload up to 4 images (minimum 1 required)
+                </p>
+              </div>
+            </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
               {images.map((img, i) => (
                 <label
                   key={i}
-                  className="aspect-[3/4] bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-center cursor-pointer overflow-hidden hover:border-black transition"
+                  className="group aspect-[3/4] rounded-3xl border border-black/10 bg-[#fafaf8] flex items-center justify-center cursor-pointer overflow-hidden hover:border-black transition-all duration-300"
                 >
-                  <img
-                    src={img ? URL.createObjectURL(img) : uploadIcon}
-                    className={`${
-                      img
-                        ? "w-full h-full object-cover"
-                        : "w-10 opacity-40"
-                    }`}
-                    alt=""
-                  />
+                  {img ? (
+                    <img
+                      src={URL.createObjectURL(img)}
+                      className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                      alt={`Product ${i + 1}`}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-center px-4">
+                      <img src={uploadIcon} className="w-10 opacity-40 mb-3" alt="" />
+                      <p className="text-xs uppercase tracking-[0.18em] text-gray-500">
+                        Upload
+                      </p>
+                    </div>
+                  )}
+
                   <input
                     type="file"
                     hidden
                     accept="image/*"
-                    onChange={(e) =>
-                      handleImageChange(i, e.target.files[0])
-                    }
+                    onChange={(e) => handleImageChange(i, e.target.files[0])}
                   />
                 </label>
               ))}
             </div>
           </section>
 
-          {/* ================= PRODUCT NAME ================= */}
-          <section>
-            <p className="text-xs tracking-[0.3em] font-medium mb-4">
-              PRODUCT NAME
-            </p>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Premium Cotton T-Shirt"
-              className="w-full text-2xl sm:text-3xl font-light bg-transparent outline-none placeholder:text-gray-300"
-            />
-            <div className="w-28 h-[2px] bg-black mt-4" />
-          </section>
-
-          {/* ================= DESCRIPTION ================= */}
-          <section>
-            <p className="text-xs tracking-[0.3em] font-medium mb-4">
-              DESCRIPTION
-            </p>
-            <textarea
-              rows={5}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Fabric, fit, wash care, styling, etc."
-              className="w-full bg-gray-50 rounded-2xl p-5 text-sm border border-gray-200 focus:border-black outline-none"
-            />
-          </section>
-
-          {/* ================= META GRID ================= */}
-          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div>
-              <p className="text-[10px] tracking-[0.3em] mb-2">
-                CATEGORY
-              </p>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full border-b border-black bg-transparent py-3 outline-none"
-              >
-                <option>Men</option>
-                <option>Women</option>
-                <option>Kids</option>
-              </select>
-            </div>
-
-            <div>
-              <p className="text-[10px] tracking-[0.3em] mb-2">
-                SUB CATEGORY
-              </p>
-              <select
-                value={subCategory}
-                onChange={(e) => setSubCategory(e.target.value)}
-                className="w-full border-b border-black bg-transparent py-3 outline-none"
-              >
-                <option>TopWear</option>
-                <option>BottomWear</option>
-                <option>WinterWear</option>
-              </select>
-            </div>
-
-            <div>
-              <p className="text-[10px] tracking-[0.3em] mb-2">
-                PRICE
+          {/* NAME + DESCRIPTION */}
+          <section className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6 lg:gap-8">
+            <div className="rounded-3xl border border-black/5 bg-[#fafaf8] p-5 sm:p-6">
+              <p className="text-xs tracking-[0.28em] uppercase text-gray-500 mb-4">
+                Product Name
               </p>
               <input
-                type="number"
-                min={1}
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                className="w-full border-b border-black bg-transparent py-3 outline-none text-lg"
-                placeholder="₹"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Premium Cotton T-Shirt"
+                className="w-full text-xl sm:text-2xl lg:text-3xl font-light bg-transparent outline-none placeholder:text-gray-300"
               />
             </div>
 
-            {/* ================= STOCK ================= */}
-            <div>
-              <p className="text-[10px] tracking-[0.3em] mb-2">
-                STOCK PER SIZE
+            <div className="rounded-3xl border border-black/5 bg-[#fafaf8] p-5 sm:p-6">
+              <p className="text-xs tracking-[0.28em] uppercase text-gray-500 mb-4">
+                Description
               </p>
-              <div className="space-y-2">
+              <textarea
+                rows={5}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Fabric, fit, wash care, styling, etc."
+                className="w-full bg-transparent text-sm sm:text-base outline-none resize-none placeholder:text-gray-400"
+              />
+            </div>
+          </section>
+
+          {/* META */}
+          <section>
+            <div className="flex items-center gap-3 mb-5 sm:mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-[#f7f7f3] border border-black/5 flex items-center justify-center">
+                <FiBox className="text-lg" />
+              </div>
+              <p className="text-xs tracking-[0.28em] uppercase text-gray-500">
+                Product Details
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
+              <div className="rounded-3xl border border-black/5 bg-[#fafaf8] p-5">
+                <p className="text-[10px] tracking-[0.28em] uppercase text-gray-500 mb-3">
+                  Category
+                </p>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full bg-transparent outline-none text-sm sm:text-base"
+                >
+                  <option>Men</option>
+                  <option>Women</option>
+                  <option>Kids</option>
+                </select>
+              </div>
+
+              <div className="rounded-3xl border border-black/5 bg-[#fafaf8] p-5">
+                <p className="text-[10px] tracking-[0.28em] uppercase text-gray-500 mb-3">
+                  Sub Category
+                </p>
+                <select
+                  value={subCategory}
+                  onChange={(e) => setSubCategory(e.target.value)}
+                  className="w-full bg-transparent outline-none text-sm sm:text-base"
+                >
+                  <option>TopWear</option>
+                  <option>BottomWear</option>
+                  <option>WinterWear</option>
+                </select>
+              </div>
+
+              <div className="rounded-3xl border border-black/5 bg-[#fafaf8] p-5">
+                <p className="text-[10px] tracking-[0.28em] uppercase text-gray-500 mb-3">
+                  Price
+                </p>
+                <input
+                  type="number"
+                  min={1}
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className="w-full bg-transparent outline-none text-lg sm:text-xl font-medium"
+                  placeholder="₹ 999"
+                />
+              </div>
+
+              <div className="rounded-3xl border border-black/5 bg-[#fafaf8] p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] tracking-[0.28em] uppercase text-gray-500">
+                      Bestseller
+                    </p>
+                    <p className="text-sm text-gray-500 mt-2">Feature product</p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setBestSeller(!bestSeller)}
+                    className={`w-14 h-8 rounded-full transition relative ${
+                      bestSeller ? "bg-black" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 w-6 h-6 rounded-full bg-white transition ${
+                        bestSeller ? "left-7" : "left-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* SIZES + STOCK */}
+          <section className="grid grid-cols-1 xl:grid-cols-[0.9fr_1.1fr] gap-6 lg:gap-8">
+            <div className="rounded-3xl border border-black/5 bg-white p-5 sm:p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-2xl bg-[#f7f7f3] border border-black/5 flex items-center justify-center">
+                  <FiCheckSquare className="text-lg" />
+                </div>
+                <p className="text-xs tracking-[0.28em] uppercase text-gray-500">
+                  Available Sizes
+                </p>
+              </div>
+
+              <div className="flex gap-3 flex-wrap">
+                {defaultSizes.map((size) => (
+                  <button
+                    type="button"
+                    key={size}
+                    onClick={() => toggleSize(size)}
+                    className={`px-6 sm:px-7 py-3 text-xs tracking-[0.2em] rounded-full transition-all duration-300 ${
+                      sizes.includes(size)
+                        ? "bg-black text-white"
+                        : "border border-black/10 bg-[#fafaf8] hover:border-black"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-black/5 bg-white p-5 sm:p-6">
+              <p className="text-xs tracking-[0.28em] uppercase text-gray-500 mb-5">
+                Stock Per Size
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {defaultSizes.map((s) => {
                   const active = sizes.includes(s);
+
                   return (
-                    <div key={s} className="flex items-center gap-3">
-                      <span
-                        className={`w-8 text-sm ${
-                          active ? "font-medium" : "opacity-30"
-                        }`}
-                      >
-                        {s}
-                      </span>
+                    <div
+                      key={s}
+                      className={`rounded-2xl border p-4 transition ${
+                        active
+                          ? "border-black/10 bg-[#fafaf8]"
+                          : "border-black/5 bg-gray-50 opacity-70"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <span className="text-sm font-medium">{s}</span>
+                        <span
+                          className={`text-[10px] uppercase tracking-[0.18em] ${
+                            active ? "text-black" : "text-gray-400"
+                          }`}
+                        >
+                          {active ? "Active" : "Disabled"}
+                        </span>
+                      </div>
+
                       <input
                         type="number"
                         min={0}
                         disabled={!active}
                         value={stockPerSize[s]}
-                        onChange={(e) =>
-                          handleStockChange(s, e.target.value)
-                        }
-                        className={`flex-1 border-b py-2 bg-transparent outline-none ${
-                          active
-                            ? "border-black"
-                            : "border-gray-200 cursor-not-allowed"
-                        }`}
+                        onChange={(e) => handleStockChange(s, e.target.value)}
+                        className="w-full bg-transparent outline-none text-lg disabled:cursor-not-allowed"
+                        placeholder="0"
                       />
                     </div>
                   );
@@ -275,53 +363,22 @@ function Add() {
             </div>
           </section>
 
-          {/* ================= SIZES ================= */}
-          <section>
-            <p className="text-xs tracking-[0.3em] font-medium mb-4">
-              AVAILABLE SIZES
-            </p>
-            <div className="flex gap-3 flex-wrap">
-              {defaultSizes.map((size) => (
-                <button
-                  type="button"
-                  key={size}
-                  onClick={() => toggleSize(size)}
-                  className={`px-7 py-2.5 text-xs tracking-widest rounded-full transition ${
-                    sizes.includes(size)
-                      ? "bg-black text-white"
-                      : "border border-gray-300 hover:border-black"
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
+          {/* SUBMIT */}
+          <section className="pt-2 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+            <div className="text-sm text-gray-500">
+              Ensure at least one image, valid price, and stock for selected sizes.
             </div>
-          </section>
 
-          {/* ================= BESTSELLER ================= */}
-          <section className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={bestSeller}
-              onChange={() => setBestSeller(!bestSeller)}
-              className="scale-125"
-            />
-            <span className="text-xs tracking-widest uppercase">
-              Feature as Bestseller
-            </span>
-          </section>
-
-          {/* ================= SUBMIT ================= */}
-          <section className="pt-6">
             <button
               disabled={loading}
-              className="w-full sm:w-auto px-16 sm:px-24 py-4 bg-black text-white text-xs tracking-[0.35em] rounded-full hover:opacity-90 transition disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-3 rounded-2xl bg-black text-white px-8 sm:px-10 lg:px-12 py-4 text-xs sm:text-sm tracking-[0.2em] uppercase hover:bg-neutral-800 transition disabled:opacity-50"
             >
-              {loading ? "ADDING PRODUCT..." : "ADD PRODUCT"}
+              <FiUploadCloud className="text-base" />
+              {loading ? "Adding Product..." : "Add Product"}
             </button>
           </section>
         </form>
-      </div>
+      </main>
     </div>
   );
 }
