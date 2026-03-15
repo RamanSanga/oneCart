@@ -33,10 +33,12 @@ function Add() {
   const toggleSize = (size) => {
     setSizes((prev) => {
       const isSelected = prev.includes(size);
+
       if (isSelected) {
         setStockPerSize((p) => ({ ...p, [size]: 0 }));
         return prev.filter((s) => s !== size);
       }
+
       return [...prev, size];
     });
   };
@@ -54,12 +56,24 @@ function Add() {
     });
   };
 
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setPrice("");
+    setCategory("Men");
+    setSubCategory("TopWear");
+    setBestSeller(false);
+    setSizes([]);
+    setImages([null, null, null, null]);
+    setStockPerSize(Object.fromEntries(defaultSizes.map((s) => [s, 0])));
+  };
+
   const handleAddProduct = async (e) => {
     e.preventDefault();
 
     if (!images[0]) return alert("At least 1 product image is required");
     if (!name.trim()) return alert("Product name is required");
-    if (!price || price <= 0) return alert("Enter valid price");
+    if (!price || Number(price) <= 0) return alert("Enter valid price");
     if (sizes.length === 0) return alert("Select at least one size");
 
     const hasStock = sizes.some((s) => stockPerSize[s] > 0);
@@ -69,39 +83,44 @@ function Add() {
       setLoading(true);
 
       const formData = new FormData();
-      formData.append("name", name);
-      formData.append("description", description);
-      formData.append("price", price);
+      formData.append("name", name.trim());
+      formData.append("description", description.trim());
+      formData.append("price", Number(price));
       formData.append("category", category);
       formData.append("subCategory", subCategory);
-      formData.append("bestSeller", bestSeller);
+      formData.append("bestSeller", String(bestSeller));
       formData.append("sizes", JSON.stringify(sizes));
 
       const filteredStock = {};
-      sizes.forEach((s) => (filteredStock[s] = stockPerSize[s]));
+      sizes.forEach((s) => {
+        filteredStock[s] = stockPerSize[s];
+      });
+
       formData.append("stock", JSON.stringify(filteredStock));
 
       images.forEach((img, i) => {
-        if (img) formData.append(`image${i + 1}`, img);
+        if (img) {
+          formData.append(`image${i + 1}`, img);
+        }
       });
 
-      await axios.post(`${serverUrl}/api/product/addproduct`, formData, {
+      const res = await axios.post(`${serverUrl}/api/product/addproduct`, formData, {
         withCredentials: true,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
-      setName("");
-      setDescription("");
-      setPrice("");
-      setCategory("Men");
-      setSubCategory("TopWear");
-      setBestSeller(false);
-      setSizes([]);
-      setImages([null, null, null, null]);
-      setStockPerSize(Object.fromEntries(defaultSizes.map((s) => [s, 0])));
+      console.log("Add product response:", res.data);
 
-      alert("✅ Product added successfully");
+      if (res.data?.success) {
+        resetForm();
+        alert(res.data?.message || "✅ Product added successfully");
+      } else {
+        alert(res.data?.message || "Add product failed");
+      }
     } catch (error) {
-      console.error(error);
+      console.error("Add product error:", error.response?.data || error.message);
       alert(error.response?.data?.message || "Add product failed");
     } finally {
       setLoading(false);
@@ -370,6 +389,7 @@ function Add() {
             </div>
 
             <button
+              type="submit"
               disabled={loading}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-3 rounded-2xl bg-black text-white px-8 sm:px-10 lg:px-12 py-4 text-xs sm:text-sm tracking-[0.2em] uppercase hover:bg-neutral-800 transition disabled:opacity-50"
             >
