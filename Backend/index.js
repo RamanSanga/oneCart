@@ -24,20 +24,23 @@ const port = process.env.PORT || 8000;
 app.set("trust proxy", 1);
 
 /* ===== CORS (MUST BE FIRST MIDDLEWARE) ===== */
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "http://localhost:5174",
-  "http://127.0.0.1:5174",
-  "https://onecart-1-frontend32.onrender.com",
-  "https://onecart-1-admin3.onrender.com",
-  "https://onecart-admin-d1du.onrender.com"
-];
+const allowedOrigins = new Set(
+  [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "https://onecart-frontend-beige.vercel.app",
+    "https://onecart-admin-eosin.vercel.app",
+    process.env.FRONTEND_URL,
+    process.env.ADMIN_URL,
+  ].filter(Boolean)
+);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.has(origin)) {
         return callback(null, true);
       }
 

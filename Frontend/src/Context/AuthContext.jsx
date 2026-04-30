@@ -3,11 +3,11 @@ import React, { createContext } from "react";
 export const authDataContext = createContext();
 
 function AuthContext({ children }) {
-  // Use localhost in development, otherwise use the production URL
   const serverUrl =
-    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    import.meta.env.VITE_SERVER_URL ||
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
       ? "http://localhost:8000"
-      : "https://onecart-029d.onrender.com";
+      : "https://onecart-029d.onrender.com");
 
   const value = {
     serverUrl,
