@@ -5,12 +5,15 @@ import App from './App.jsx'
 import {BrowserRouter} from 'react-router-dom'
 import AuthContext from './context/AuthContext.jsx'
 import AdminContext from './context/AdminContext.jsx'
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
   <AuthContext>
     <AdminContext>
       <App />
+      <ToastContainer />
     </AdminContext>
     </AuthContext>
     </BrowserRouter>

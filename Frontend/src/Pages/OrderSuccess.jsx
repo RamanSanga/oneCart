@@ -37,7 +37,7 @@ function OrderSuccess() {
 
           {/* VIEW ORDERS */}
           <button
-            onClick={() => navigate("/orders")}
+            onClick={() => navigate("/order")}
             className="px-8 py-3 border border-black text-sm tracking-wide hover:bg-black hover:text-white transition"
           >
             View My Orders

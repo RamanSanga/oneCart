@@ -1,21 +1,23 @@
-import React, { createContext } from 'react'
+import React, { createContext } from "react";
 
-export const authDataContext = createContext()
+export const authDataContext = createContext();
 
-function AuthContext({children}) {
-    let serverUrl = "https://onecart-029d.onrender.com"
+function AuthContext({ children }) {
+  // Use localhost in development, otherwise use the production URL
+  const serverUrl =
+    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+      ? "http://localhost:8000"
+      : "https://onecart-029d.onrender.com";
 
-    let value = {
-        serverUrl
-
-    }
+  const value = {
+    serverUrl,
+  };
 
   return (
-        <authDataContext.Provider value={value}>
-            {children}
-        </authDataContext.Provider>
-      
-  )
+    <authDataContext.Provider value={value}>
+      {children}
+    </authDataContext.Provider>
+  );
 }
 
-export default AuthContext
+export default AuthContext;

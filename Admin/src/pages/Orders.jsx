@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   FiRefreshCw,
@@ -19,6 +19,40 @@ export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("All");
+
+  const getCustomerName = (address) => {
+    if (!address) return "Unknown Customer";
+    const fullName = `${address.firstName || ""} ${address.lastName || ""}`.trim();
+    return fullName || "Unknown Customer";
+  };
+
+  const getFullAddress = (address) => {
+    if (!address) return "Address not provided";
+
+    const parts = [
+      address.street,
+      address.city,
+      address.state,
+      address.pincode,
+      address.country,
+    ].filter(Boolean);
+
+    return parts.length ? parts.join(", ") : "Address not provided";
+  };
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      const matchesSearch = 
+        order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getCustomerName(order.address).toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = filterStatus === "All" || order.status === filterStatus;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [orders, searchTerm, filterStatus]);
 
   const fetchOrders = async () => {
     try {
@@ -85,26 +119,6 @@ export default function Orders() {
     return new Date(date).toLocaleDateString("en-IN");
   };
 
-  const getCustomerName = (address) => {
-    if (!address) return "Unknown Customer";
-    const fullName = `${address.firstName || ""} ${address.lastName || ""}`.trim();
-    return fullName || "Unknown Customer";
-  };
-
-  const getFullAddress = (address) => {
-    if (!address) return "Address not provided";
-
-    const parts = [
-      address.street,
-      address.city,
-      address.state,
-      address.pincode,
-      address.country,
-    ].filter(Boolean);
-
-    return parts.length ? parts.join(", ") : "Address not provided";
-  };
-
   const getStatusBadge = (status) => {
     const current = status || "Order Placed";
 
@@ -157,7 +171,7 @@ export default function Orders() {
       <main className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-6 sm:py-8 lg:py-10">
         {/* HEADER */}
         <section className="mb-8 sm:mb-10 lg:mb-12">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-[10px] sm:text-xs tracking-[0.35em] uppercase text-gray-500 mb-2">
                 Order Management
@@ -165,29 +179,48 @@ export default function Orders() {
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-light tracking-[0.03em] uppercase">
                 All Orders
               </h1>
-              <p className="text-sm sm:text-base text-gray-500 mt-3 max-w-2xl">
-                Monitor customer orders, payment status, delivery progress, and
-                fulfillment updates from a clean premium dashboard.
-              </p>
+              <div className="flex flex-col md:flex-row gap-4 mt-8">
+                 <div className="relative flex-1">
+                    <input 
+                      type="text" 
+                      placeholder="Search by Order ID or Customer Name..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full bg-white rounded-2xl border border-black/5 px-6 py-4 text-sm outline-none focus:border-black transition-all shadow-sm"
+                    />
+                 </div>
+                 <select 
+                   value={filterStatus}
+                   onChange={(e) => setFilterStatus(e.target.value)}
+                   className="bg-white rounded-2xl border border-black/5 px-6 py-4 text-sm outline-none focus:border-black transition-all shadow-sm font-medium"
+                 >
+                    <option value="All">All Statuses</option>
+                    <option value="Order Placed">Order Placed</option>
+                    <option value="Packing">Packing</option>
+                    <option value="Shipped">Shipped</option>
+                    <option value="Out for delivery">Out for delivery</option>
+                    <option value="Delivered">Delivered</option>
+                 </select>
+              </div>
             </div>
 
             <button
               onClick={fetchOrders}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-black bg-black text-white px-5 sm:px-6 py-3 text-xs sm:text-sm tracking-[0.18em] uppercase hover:bg-white hover:text-black transition-all duration-300"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-black bg-black text-white px-5 sm:px-6 py-3 text-xs sm:text-sm tracking-[0.18em] uppercase hover:bg-white hover:text-black transition-all duration-300 shadow-xl"
             >
               <FiRefreshCw />
-              Refresh Orders
+              Refresh
             </button>
           </div>
         </section>
 
-        {orders.length === 0 ? (
-          <div className="rounded-3xl border border-black/5 bg-white p-10 sm:p-14 text-center text-gray-500">
-            No orders found.
+        {filteredOrders.length === 0 ? (
+          <div className="rounded-[40px] border border-black/5 bg-white p-20 text-center text-gray-400 text-sm uppercase tracking-widest italic">
+            No matching orders found.
           </div>
         ) : (
           <div className="space-y-5 sm:space-y-6">
-            {orders.map((order) => {
+            {filteredOrders.map((order) => {
               const address = order.address || {};
               const customerName = getCustomerName(address);
               const fullAddress = getFullAddress(address);

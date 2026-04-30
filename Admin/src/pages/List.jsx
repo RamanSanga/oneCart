@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useMemo, useState, useContext } from "react";
 import axios from "axios";
 import { authDataContext } from "../context/AuthContext.jsx";
 import {
@@ -20,6 +20,15 @@ function List() {
   const [newSizeInputs, setNewSizeInputs] = useState({});
   const [updating, setUpdating] = useState({});
   const [updatingPrice, setUpdatingPrice] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredList = useMemo(() => {
+    return list.filter(item => 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.subCategory.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [list, searchTerm]);
 
   const fetchList = async () => {
     setLoading(true);
@@ -28,7 +37,11 @@ function List() {
         withCredentials: true,
       });
 
-      const products = Array.isArray(res.data) ? res.data : [];
+      const products = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data?.products)
+          ? res.data.products
+          : [];
       setList(products);
 
       const initial = {};
@@ -54,8 +67,10 @@ function List() {
   };
 
   useEffect(() => {
-    fetchList();
-  }, []);
+    if (serverUrl) {
+      fetchList();
+    }
+  }, [serverUrl]);
 
   const getTotalStock = (stock = {}) =>
     Object.values(stock).reduce((s, v) => s + Number(v || 0), 0);
@@ -117,7 +132,7 @@ function List() {
 
     const key = `${productId}_${size}`;
     try {
-      setUpdating((u) => ({ ...u, [u]: true }));
+      setUpdating((u) => ({ ...u, [key]: true }));
 
       const res = await axios.put(
         `${serverUrl}/api/product/update-stock`,
@@ -174,15 +189,20 @@ function List() {
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-light tracking-[0.03em] uppercase">
                 Product Inventory
               </h1>
-              <p className="text-sm sm:text-base text-gray-500 mt-3 max-w-2xl">
-                Review products, update price, manage stock per size, and maintain
-                a clean premium inventory system.
-              </p>
+              <div className="mt-8 max-w-xl">
+                 <input 
+                   type="text" 
+                   placeholder="Search by product name or category..."
+                   value={searchTerm}
+                   onChange={(e) => setSearchTerm(e.target.value)}
+                   className="w-full bg-white rounded-2xl border border-black/5 px-6 py-4 text-sm outline-none focus:border-black transition-all shadow-sm"
+                 />
+              </div>
             </div>
 
             <button
               onClick={fetchList}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-black bg-black text-white px-5 sm:px-6 py-3 text-xs sm:text-sm tracking-[0.18em] uppercase hover:bg-white hover:text-black transition-all duration-300"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-black bg-black text-white px-5 sm:px-6 py-3 text-xs sm:text-sm tracking-[0.18em] uppercase hover:bg-white hover:text-black transition-all duration-300 shadow-xl"
             >
               <RefreshCw size={16} />
               Refresh
@@ -194,13 +214,13 @@ function List() {
           <div className="rounded-3xl border border-black/5 bg-white p-10 sm:p-14 text-center text-gray-500">
             Loading inventory...
           </div>
-        ) : list.length === 0 ? (
-          <div className="rounded-3xl border border-black/5 bg-white p-10 sm:p-14 text-center text-gray-500">
-            No products found.
+        ) : filteredList.length === 0 ? (
+          <div className="rounded-[40px] border border-black/5 bg-white p-20 text-center text-gray-400 text-sm uppercase tracking-widest italic">
+            No matching products found.
           </div>
         ) : (
           <div className="space-y-5 sm:space-y-6">
-            {list.map((item) => {
+            {filteredList.map((item) => {
               const stockObj =
                 item.stock && typeof item.stock === "object"
                   ? item.stock.toObject
@@ -220,7 +240,7 @@ function List() {
                     <div className="w-full 2xl:w-auto">
                       <img
                         src={item.image1}
-                        className="w-full sm:w-[180px] lg:w-[220px] h-[240px] sm:h-[220px] lg:h-[260px] object-cover rounded-3xl"
+                        className="w-full sm:w-[180px] lg:w-[220px] h-60 sm:h-[220px] lg:h-[260px] object-cover rounded-3xl"
                         alt={item.name}
                       />
                     </div>
@@ -229,7 +249,7 @@ function List() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5 mb-6">
                         <div className="min-w-0">
-                          <h2 className="text-xl sm:text-2xl font-medium tracking-wide break-words">
+                          <h2 className="text-xl sm:text-2xl font-medium tracking-wide wrap-break-word">
                             {item.name}
                           </h2>
                           <p className="text-sm sm:text-base text-gray-500 mt-2">

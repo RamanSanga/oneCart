@@ -84,9 +84,11 @@ export const placeOrder = async (req, res) => {
       await product.save();
     }
 
-    // ================= CLEAR CART =================
+    // ================= CLEAR CART & MARK DISCOUNT USED =================
     user.cartData = {};
+    user.discountUsed = true; // Essential: Prevents multiple uses of first-order discount
     user.markModified("cartData");
+    user.markModified("discountUsed");
     await user.save();
 
     return res.status(201).json({

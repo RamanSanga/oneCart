@@ -100,7 +100,10 @@ export const verifyRazorpayPayment = async (req, res) => {
 
     if (order.userId) {
       try {
-        await User.findByIdAndUpdate(order.userId, { cartData: {} });
+        await User.findByIdAndUpdate(order.userId, { 
+          cartData: {},
+          discountUsed: true // Finalize discount usage after successful payment
+        });
       } catch (e) {
         console.warn("Failed to clear user cart after payment:", e.message || e);
       }

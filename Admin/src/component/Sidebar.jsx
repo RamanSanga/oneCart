@@ -5,6 +5,11 @@ import {
   FiCheckCircle,
   FiX,
   FiHome,
+  FiTag,
+  FiMessageSquare,
+  FiSettings,
+  FiBell,
+  FiMail,
 } from "react-icons/fi";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
@@ -16,6 +21,11 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     { label: "Add Items", icon: FiPlus, path: "/add" },
     { label: "List Items", icon: FiList, path: "/list" },
     { label: "Orders", icon: FiCheckCircle, path: "/orders" },
+    { label: "Coupons", icon: FiTag, path: "/coupons" },
+    { label: "Reviews", icon: FiMessageSquare, path: "/reviews" },
+    { label: "Stock Alerts", icon: FiBell, path: "/stock-alerts" },
+    { label: "Leads", icon: FiMail, path: "/leads" },
+    { label: "Settings", icon: FiSettings, path: "/settings" },
   ];
 
   const handleNavigate = (path) => {
@@ -124,10 +134,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             <p className="text-[10px] tracking-[0.28em] uppercase text-gray-500 mb-2">
               One Cart
             </p>
-            <p className="text-sm text-gray-700 leading-relaxed">
-              Premium admin experience designed for products, orders, and store
-              operations.
-            </p>
+            
           </div>
         </div>
       </aside>

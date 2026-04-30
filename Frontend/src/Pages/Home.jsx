@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import Background from "../component/Background";
-import Hero from "../component/Hero";
+import HeroPremium from "../component/HeroPremium";
+import InfiniteMarquee from "../component/InfiniteMarquee";
 import Product from "./Product.jsx"
 import OurPolicy from "../component/OurPolicy.jsx"
 import Newletter from "../component/NewLetterBox.jsx";
+
 function Home() {
   const heroData = [
     { text1: "Premium Quality", text2: "Designed For Modern Lifestyle" },
@@ -25,16 +27,19 @@ function Home() {
   }, []);
 
   return (
-    <div className="relative w-full h-[90vh]">
+    <div className="relative w-full min-h-screen bg-transparent">
 
-      <Background heroCount={heroCount} />
+      {/* 100vh wrapper for Hero */}
+      <div className="relative w-full min-h-svh pb-24 lg:pb-32">
+        <Background heroCount={heroCount} />
+        <HeroPremium
+          heroData={heroData[heroCount]}
+          heroCount={heroCount}
+          totalSlides={heroData.length}
+        />
+      </div>
 
-      <Hero
-        heroData={heroData[heroCount]}
-        heroCount={heroCount}
-        setHeroCount={setHeroCount}
-        totalSlides={heroData.length}  // IMPORTANT
-      />
+      <InfiniteMarquee />
       <Product />
       <Newletter />
       <OurPolicy />

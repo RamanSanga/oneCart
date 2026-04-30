@@ -1,171 +1,216 @@
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState } from "react";
 import googleIcon from "../assets/google.png";
 import oneCart from "../assets/oneCart.png";
 import openEye from "../assets/openEye.png";
 import closeEye from "../assets/closeEye.png";
+import back3 from "../assets/back3.png"; // Using a different image for signup
 import { Link, useNavigate } from "react-router-dom";
 import { authDataContext } from "../Context/AuthContext";
 import { userDataContext } from "../Context/UserContext";
 import axios from "axios";
 import { signInWithPopup } from "firebase/auth";
 import { auth, provider } from "../../utils/Firebase";
+import { motion } from "framer-motion";
 
 export default function SignupPage() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const { serverUrl } = useContext(authDataContext);
   const { getCurrentUser } = useContext(userDataContext);
   const navigate = useNavigate();
 
-  /* ================= NORMAL SIGNUP ================= */
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       await axios.post(
         serverUrl + "/api/auth/registration",
-        {
-          name: form.name,
-          email: form.email,
-          password: form.password,
-        },
+        { name: form.name, email: form.email, password: form.password },
         { withCredentials: true }
       );
-
       await getCurrentUser();
       navigate("/");
     } catch (error) {
       console.error("Signup error:", error?.response?.data || error.message);
+      alert(error?.response?.data?.message || "Registration failed");
+    } finally {
+      setLoading(false);
     }
   };
 
-  /* ================= GOOGLE SIGNUP (STEP 1) ================= */
-const googleSignUp = async () => {
-  try {
-    const result = await signInWithPopup(auth, provider);
-    const user = result.user;
+  const googleSignUp = async () => {
+    setGoogleLoading(true);
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
 
-    await axios.post(
-      serverUrl + "/api/auth/googlelogin",   // ✅ EXACT MATCH
-      {
-        name: user.displayName,
-        email: user.email,
-      },
-      { withCredentials: true }
-    );
-
-    await getCurrentUser();
-    navigate("/");
-  } catch (error) {
-    console.error("Google Login Error:", error);
-    alert(error.message || "Google login failed");
-  }
-};
-
+      await axios.post(
+        serverUrl + "/api/auth/googlelogin",
+        { name: user.displayName, email: user.email },
+        { withCredentials: true }
+      );
+      await getCurrentUser();
+      navigate("/");
+    } catch (error) {
+      console.error("Google Login Error:", error);
+      alert(error.message || "Google registration failed");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-[#021a24] to-[#051f2d] flex items-center justify-center p-6">
-
-      {/* LEFT */}
-      <div className="hidden md:flex flex-col w-1/2 text-white px-10">
-        <div className="flex items-center gap-3 mb-6">
-          <img src={oneCart} className="w-10 h-10 bg-white/20 rounded-full" />
-          <h1 className="text-2xl font-semibold">OneCart</h1>
+    <div className="min-h-screen w-full flex bg-white font-sans text-gray-900 selection:bg-black selection:text-white">
+      {/* LEFT COMPONENT - IMAGE */}
+      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
+        <motion.div 
+          initial={{ scale: 1.05, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute inset-0"
+        >
+          <img 
+            src={back3} 
+            alt="Luxury Editorial" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/10 mix-blend-overlay"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+        </motion.div>
+        
+        <div className="absolute bottom-12 left-12 text-white max-w-md">
+          <motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.8 }}
+          >
+            <h2 className="text-3xl font-light tracking-wide mb-3">Join the collective.</h2>
+            <p className="text-white/80 font-light leading-relaxed">
+              Create an account to track orders, save your wishlist, and receive exclusive access to new drops.
+            </p>
+          </motion.div>
         </div>
-        <h2 className="text-4xl font-bold">Welcome to OneCart</h2>
-        <p className="text-gray-300 mt-3 text-lg">
-          Place your order effortlessly
-        </p>
       </div>
 
-      {/* RIGHT */}
-      <div className="bg-[#0b2a36]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-10 w-full max-w-md text-white">
-        <h2 className="text-2xl font-bold text-center mb-6">
-          Registration Page
-        </h2>
-
-        {/* GOOGLE */}
-        <button
-          onClick={googleSignUp}
-          disabled={googleLoading}
-          className="w-full bg-white/10 hover:bg-white/20 transition p-3 rounded-lg flex items-center justify-center gap-3 mb-6 disabled:opacity-60"
+      {/* RIGHT COMPONENT - FORM */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-20 relative overflow-hidden">
+        {/* Subtle decorative background blur */}
+        <div className="absolute top-[10%] left-[-10%] w-[40%] h-[40%] bg-gray-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+        
+        <motion.div 
+          initial={{ x: 20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="w-full max-w-md z-10"
         >
-          <img src={googleIcon} className="w-5" />
-          {googleLoading ? "Redirecting..." : "Register with Google"}
-        </button>
+          {/* Logo */}
+          <Link to="/" className="inline-block mb-10 group">
+            <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center transition-transform duration-500 group-hover:scale-105 shadow-xl">
+              <span className="text-white font-bold text-xl tracking-tighter">OC</span>
+            </div>
+          </Link>
 
-        <div className="flex items-center gap-4 my-4">
-          <div className="h-px w-full bg-white/20" />
-          <span className="text-gray-400 text-sm">OR</span>
-          <div className="h-px w-full bg-white/20" />
-        </div>
+          <div className="mb-10">
+            <h1 className="text-3xl sm:text-4xl font-light tracking-tight mb-3">Create Account</h1>
+            <p className="text-gray-500 text-sm tracking-wide">Enter your details to become a member.</p>
+          </div>
 
-        {/* FORM */}
-        <form onSubmit={handleSignup} className="space-y-4">
-          <input
-            type="text"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            className="w-full bg-transparent border border-white/20 rounded-lg p-3"
-            placeholder="Username"
-            required
-          />
-
-          <input
-            type="email"
-            name="email"
-            value={form.email}
-            onChange={handleChange}
-            className="w-full bg-transparent border border-white/20 rounded-lg p-3"
-            placeholder="Email"
-            required
-          />
-
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              className="w-full bg-transparent border border-white/20 rounded-lg p-3 pr-12"
-              placeholder="Password"
-              required
-            />
-
-            <span
-              className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              <img
-                src={showPassword ? openEye : closeEye}
-                className="w-6 h-6 filter invert"
+          <form onSubmit={handleSignup} className="space-y-6">
+            <div className="space-y-1 group">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 group-focus-within:text-black transition-colors">
+                Full Name
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                className="w-full bg-transparent border-b border-gray-200 py-3 text-base text-black placeholder-gray-300 outline-none focus:border-black transition-all"
+                placeholder="John Doe"
+                required
               />
-            </span>
+            </div>
+
+            <div className="space-y-1 group">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 group-focus-within:text-black transition-colors">
+                Email Address
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                className="w-full bg-transparent border-b border-gray-200 py-3 text-base text-black placeholder-gray-300 outline-none focus:border-black transition-all"
+                placeholder="name@example.com"
+                required
+              />
+            </div>
+
+            <div className="space-y-1 group relative">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 group-focus-within:text-black transition-colors">
+                Password
+              </label>
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                className="w-full bg-transparent border-b border-gray-200 py-3 pr-10 text-base text-black placeholder-gray-300 outline-none focus:border-black transition-all"
+                placeholder="••••••••"
+                required
+              />
+              <button
+                type="button"
+                className="absolute right-0 bottom-3 text-gray-400 hover:text-black transition-colors"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                <img
+                  src={showPassword ? openEye : closeEye}
+                  alt="Toggle password"
+                  className="w-5 h-5 opacity-40 hover:opacity-100 transition-opacity"
+                />
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-black text-white py-4 mt-8 rounded-none text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-900 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+            >
+              {loading ? "Creating account..." : "Sign Up"}
+            </button>
+          </form>
+
+          <div className="my-8 flex items-center gap-4">
+            <div className="h-px flex-1 bg-gray-200"></div>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Or continue with</span>
+            <div className="h-px flex-1 bg-gray-200"></div>
           </div>
 
           <button
-            type="submit"
-            className="w-full bg-indigo-500 hover:bg-indigo-600 p-3 rounded-lg text-lg font-semibold"
+            type="button"
+            onClick={googleSignUp}
+            disabled={googleLoading}
+            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-black py-4 rounded-none text-xs font-bold uppercase tracking-[0.1em] hover:border-black hover:bg-gray-50 transition-all duration-300 disabled:opacity-50"
           >
-            Create Account
+            <img src={googleIcon} className="w-4 h-4" alt="Google" />
+            {googleLoading ? "Connecting..." : "Google"}
           </button>
-        </form>
 
-        <p className="text-center mt-4 text-sm text-gray-300">
-          Already have an account?{" "}
-          <Link
-            to="/login"
-            className="text-indigo-400 hover:text-indigo-300 font-medium"
-          >
-            Login
-          </Link>
-        </p>
+          <p className="mt-12 text-center text-xs text-gray-500">
+            Already have an account?{" "}
+            <Link to="/login" className="font-bold text-black border-b border-black pb-0.5 hover:text-gray-600 hover:border-gray-600 transition-colors">
+              Sign in instead
+            </Link>
+          </p>
+        </motion.div>
       </div>
     </div>
   );

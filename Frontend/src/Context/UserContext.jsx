@@ -1,4 +1,3 @@
-// ...existing code...
 import { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { authDataContext } from "./AuthContext";
@@ -7,12 +6,12 @@ export const userDataContext = createContext();
 
 function UserContext({ children }) {
   const [userData, setUserData] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
   const { serverUrl: ctxServerUrl } = useContext(authDataContext) || {};
   const serverUrl = ctxServerUrl || "http://localhost:8000";
 
   const getCurrentUser = async () => {
     try {
-      // server route is usually a GET — use GET to match backend route
       const result = await axios.get(`${serverUrl}/api/user/getcurrentuser`, {
         withCredentials: true,
         headers: { "Content-Type": "application/json" },
@@ -23,17 +22,21 @@ function UserContext({ children }) {
     } catch (error) {
       console.error("getCurrentUser error:", error?.response?.status, error?.response?.data || error.message);
       setUserData(null);
+    } finally {
+      setAuthReady(true);
     }
   };
 
   useEffect(() => {
     getCurrentUser();
-  }, [serverUrl]); // re-run when serverUrl changes
+  }, [serverUrl]);
 
   let value = {
     userData,
     setUserData,
     getCurrentUser,
+    authReady,
+    serverUrl,
   };
 
   return (
@@ -44,4 +47,3 @@ function UserContext({ children }) {
 }
 
 export default UserContext;
-// ...existing code...

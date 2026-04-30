@@ -1,46 +1,24 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useMemo, useState } from "react";
 import { shopDataContext } from "../Context/ShopContext";
 import { useNavigate } from "react-router-dom";
-import { Heart } from "lucide-react";
+import { Heart, ShoppingBag, Eye } from "lucide-react";
+import QuickView from "./QuickView";
+import { motion } from "framer-motion";
 
 function Card({ name, image, id, price }) {
-  const { currency, products } = useContext(shopDataContext);
+  const { currency, products, toggleWishlist, isWishlisted, addToCart } = useContext(shopDataContext);
   const navigate = useNavigate();
+  const [showQuickView, setShowQuickView] = useState(false);
 
-  const [isWishlisted, setIsWishlisted] = useState(false);
-
-  // ---------------- WISHLIST (LOCAL ONLY) ----------------
-  useEffect(() => {
-    const wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
-    setIsWishlisted(wishlist.includes(id));
-  }, [id]);
-
-  const toggleWishlist = (e) => {
-    e.stopPropagation(); // prevent card click
-    let wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
-
-    if (wishlist.includes(id)) {
-      wishlist = wishlist.filter((pid) => pid !== id);
-      setIsWishlisted(false);
-    } else {
-      wishlist.push(id);
-      setIsWishlisted(true);
-    }
-
-    localStorage.setItem("wishlist", JSON.stringify(wishlist));
-  };
-
-  // ---------------- STOCK LOGIC (SAFE) ----------------
-  const product = products?.find((p) => p._id === id);
+  const product = useMemo(() => products?.find((p) => p._id === id), [products, id]);
+  const wishlisted = isWishlisted(id);
 
   let stock = null;
   if (product) {
     if (typeof product.stock === "number") {
       stock = product.stock;
     } else if (product.stock && typeof product.stock === "object") {
-      const plain = product.stock.toObject
-        ? product.stock.toObject()
-        : { ...product.stock };
+      const plain = product.stock.toObject ? product.stock.toObject() : { ...product.stock };
       const values = Object.values(plain).map((v) => Number(v) || 0);
       stock = values.reduce((a, b) => a + b, 0);
     }
@@ -49,120 +27,111 @@ function Card({ name, image, id, price }) {
   const lowStock = typeof stock === "number" && stock > 0 && stock <= 3;
   const outOfStock = typeof stock === "number" && stock <= 0;
 
+  const handleWishlist = (e) => {
+    e.stopPropagation();
+    toggleWishlist(product || { _id: id, name, image1: image, price });
+  };
+
+  const handleQuickAdd = (e) => {
+    e.stopPropagation();
+    if (product?.sizes?.length > 1) {
+      setShowQuickView(true);
+    } else if (product?.sizes?.length === 1) {
+      addToCart(id, product.sizes[0]);
+    } else {
+      navigate(`/productdetail/${id}`);
+    }
+  };
+
   return (
-    <div
-      className="group cursor-pointer relative"
-      onClick={() => navigate(`/productdetail/${id}`)}
-    >
-      {/* WISHLIST HEART */}
-      <button
-        onClick={toggleWishlist}
-        className="absolute top-3 right-3 z-20 bg-white/80 backdrop-blur p-2 rounded-full hover:scale-110 transition"
+    <>
+      <motion.div
+        whileHover={{ y: -8, scale: 1.005 }}
+        whileTap={{ scale: 0.99 }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        className="group cursor-pointer relative overflow-hidden bg-linear-to-b from-[#05050a] via-[#08090d] to-[#101216] rounded-4xl p-3 border border-white/6 shadow-[0_24px_80px_rgba(0,0,0,0.28)]"
+        onClick={() => navigate(`/productdetail/${id}`)}
       >
-        <Heart
-          size={16}
-          className={`${
-            isWishlisted
-              ? "fill-red-500 text-red-500"
-              : "text-gray-700"
-          }`}
-        />
-      </button>
+        <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_35%),linear-gradient(180deg,transparent,rgba(255,255,255,0.03))]" />
+        {/* IMAGE CONTAINER */}
+        <div className="relative aspect-4/5 overflow-hidden bg-[#0b0d11] rounded-3xl">
+          <img
+            src={image}
+            alt={name}
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-106"
+            loading="lazy"
+          />
+          
+          {/* OVERLAYS */}
+          <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/10 to-transparent opacity-80" />
+          <div className="absolute inset-0 bg-black/8 group-hover:bg-black/16 transition-colors duration-500" />
+          <div className="absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-black/70 to-transparent" />
+          
+          {/* ACTIONS */}
+          <div className="absolute top-4 right-4 z-20 flex flex-col gap-2 translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
+            <button
+              onClick={handleWishlist}
+              className="bg-white/8 backdrop-blur-md p-2.5 rounded-full shadow-sm transition-all duration-300 hover:scale-110 active:scale-95 border border-white/10"
+            >
+              <Heart
+                size={18}
+                className={`transition-colors duration-300 ${
+                  wishlisted ? "fill-red-500 text-red-500" : "text-white/90"
+                }`}
+              />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowQuickView(true); }}
+              className="bg-white/8 backdrop-blur-md p-2.5 rounded-full shadow-sm transition-all duration-300 hover:scale-110 active:scale-95 border border-white/10"
+            >
+              <Eye size={18} className="text-white/90" />
+            </button>
+          </div>
 
-      {/* LOW STOCK BADGE */}
-      {lowStock && (
-        <div className="absolute top-3 left-3 z-10 bg-yellow-100 text-yellow-900 px-2 py-1 text-xs rounded">
-          Hurry — {stock} left
+          <button
+            onClick={handleQuickAdd}
+            className="absolute bottom-4 left-4 right-4 bg-white/10 backdrop-blur-md py-3 px-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 hover:bg-white hover:text-black border border-white/10"
+          >
+            <ShoppingBag size={16} />
+            <span className="text-xs font-bold uppercase tracking-widest">
+              {product?.sizes?.length > 1 ? "Quick View" : "Quick Add"}
+            </span>
+          </button>
+
+          {lowStock && (
+            <div className="absolute top-4 left-4 z-10 bg-black/45 backdrop-blur-md text-yellow-300 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full shadow-sm border border-white/10">
+              Only {stock} left
+            </div>
+          )}
+
+          {outOfStock && (
+            <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
+              <span className="bg-white text-black px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] shadow-xl">
+                Out of stock
+              </span>
+            </div>
+          )}
         </div>
-      )}
 
-      {/* OUT OF STOCK OVERLAY */}
-      {outOfStock && (
-        <div className="absolute inset-0 z-20 bg-white/80 flex items-center justify-center text-red-600 font-medium text-sm">
-          Out of stock
+        {/* CONTENT */}
+        <div className="mt-5 px-2 pb-2 text-center">
+          <p className="text-[10px] font-semibold tracking-[0.36em] text-white/35 uppercase mb-2">
+            OneCart Exclusive
+          </p>
+          <h3 className="text-[15px] md:text-[16px] font-medium tracking-[-0.02em] text-white truncate px-2 mb-2">
+            {name}
+          </h3>
+          <p className="text-lg font-semibold text-white">
+            {currency} {price}
+          </p>
         </div>
+      </motion.div>
+
+      {showQuickView && (
+        <QuickView productId={id} onClose={() => setShowQuickView(false)} />
       )}
-
-      {/* IMAGE */}
-      <div className="overflow-hidden bg-gray-100 rounded-lg">
-        <img
-          src={image}
-          alt={name}
-          className="w-full h-[220px] sm:h-[250px] object-cover group-hover:scale-105 transition-transform duration-500"
-        />
-      </div>
-
-      {/* TEXT */}
-      <div className="mt-4 text-center">
-        <p className="text-sm font-light tracking-wide text-gray-800">
-          {name}
-        </p>
-        <p className="text-sm mt-1 text-gray-900">
-          {currency} {price}
-        </p>
-      </div>
-    </div>
+    </>
   );
 }
 
 export default Card;
-
-
-
-// import React from "react";
-// import { useNavigate } from "react-router-dom";
-
-// function Card({ id, name, image, hoverImage, price, isBestSeller }) {
-//   const navigate = useNavigate();
-
-//   return (
-//     <div className="group">
-//       {/* IMAGE WRAPPER – FIXED SIZE */}
-//       <div
-//         onClick={() => navigate(`/product/${id}`)}
-//         className="relative bg-[#f6f6f6] w-full h-[420px] flex items-center justify-center overflow-hidden cursor-pointer"
-//       >
-//         {/* BADGE */}
-//         {isBestSeller && (
-//           <span className="absolute top-4 left-4 text-[11px] tracking-widest bg-black text-white px-3 py-1 z-10">
-//             BEST SELLER
-//           </span>
-//         )}
-
-//         {/* MAIN IMAGE */}
-//         <img
-//           src={image}
-//           alt={name}
-//           className="w-full h-full object-contain p-10 transition-opacity duration-300 group-hover:opacity-0"
-//         />
-
-//         {/* HOVER IMAGE */}
-//         {hoverImage && (
-//           <img
-//             src={hoverImage}
-//             alt=""
-//             className="absolute inset-0 w-full h-full object-contain p-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-//           />
-//         )}
-
-//         {/* HOVER ACTION BAR */}
-//         <div className="absolute bottom-0 left-0 right-0 flex translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-//           <button className="flex-1 bg-black text-white py-3 text-sm">
-//             Add to cart
-//           </button>
-//           <button className="flex-1 bg-[#c9b28b] text-black py-3 text-sm">
-//             Quick shop
-//           </button>
-//         </div>
-//       </div>
-
-//       {/* TEXT */}
-//       <div className="mt-4 text-center">
-//         <p className="text-sm tracking-wide text-gray-900">{name}</p>
-//         <p className="text-sm mt-1 font-medium">₹ {price}</p>
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default Card;

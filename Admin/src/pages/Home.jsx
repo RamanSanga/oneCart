@@ -12,10 +12,34 @@ import {
   FiAlertCircle,
 } from "react-icons/fi";
 import { authDataContext } from "../context/AuthContext";
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts';
 
 function Home() {
   const navigate = useNavigate();
   const { serverUrl } = useContext(authDataContext);
+
+  const data = [
+    { name: 'Jan', revenue: 4000 },
+    { name: 'Feb', revenue: 3000 },
+    { name: 'Mar', revenue: 2000 },
+    { name: 'Apr', revenue: 2780 },
+    { name: 'May', revenue: 1890 },
+    { name: 'Jun', revenue: 2390 },
+    { name: 'Jul', revenue: 3490 },
+    { name: 'Aug', revenue: 4000 },
+    { name: 'Sep', revenue: 3000 },
+    { name: 'Oct', revenue: 5000 },
+    { name: 'Nov', revenue: 6000 },
+    { name: 'Dec', revenue: 8000 },
+  ];
 
   const [stats, setStats] = useState({
     totalProducts: 0,
@@ -298,6 +322,81 @@ function Home() {
                 </div>
               );
             })}
+          </div>
+
+          {/* ANALYTICS VISUALIZATION */}
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+             {/* REVENUE CHART */}
+             <div className="lg:col-span-8 bg-white rounded-3xl border border-black/5 p-8 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+                <div className="flex items-center justify-between mb-10">
+                   <div>
+                      <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Sales Performance</p>
+                      <h4 className="text-xl font-light">Revenue Trends</h4>
+                   </div>
+                   <div className="flex gap-2">
+                      <span className="px-3 py-1 rounded-full bg-gray-50 text-[10px] font-bold uppercase tracking-widest text-gray-400 cursor-pointer">Weekly</span>
+                      <span className="px-3 py-1 rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest cursor-pointer shadow-lg">Monthly</span>
+                   </div>
+                </div>
+
+                <div className="h-[250px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={data}>
+                      <defs>
+                        <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#000" stopOpacity={0.1}/>
+                          <stop offset="95%" stopColor="#000" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                      <XAxis 
+                        dataKey="name" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{fontSize: 10, fill: '#999', fontWeight: 'bold'}} 
+                        dy={10}
+                      />
+                      <YAxis hide />
+                      <Tooltip 
+                        contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)'}} 
+                        itemStyle={{fontSize: '12px', fontWeight: 'bold'}}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="revenue" 
+                        stroke="#000" 
+                        strokeWidth={2} 
+                        fillOpacity={1} 
+                        fill="url(#colorRev)" 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+             </div>
+
+             {/* TOP PRODUCTS (MOCK) */}
+             <div className="lg:col-span-4 bg-white rounded-3xl border border-black/5 p-8 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+                <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-6">Top Sellers</p>
+                <div className="flex flex-col gap-6">
+                   {[
+                      { name: "Premium Cotton Tee", sales: 142, price: "₹1,200" },
+                      { name: "Urban Cargo Pants", sales: 98, price: "₹2,499" },
+                      { name: "Minimalist Hoodie", sales: 76, price: "₹3,199" },
+                   ].map((p, i) => (
+                      <div key={i} className="flex items-center justify-between group cursor-pointer">
+                         <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xs font-bold text-gray-400">{i+1}</div>
+                            <div>
+                               <p className="text-sm font-medium group-hover:text-black transition-colors">{p.name}</p>
+                               <p className="text-[10px] text-gray-400 uppercase tracking-widest">{p.sales} Sales</p>
+                            </div>
+                         </div>
+                         <FiArrowRight className="text-gray-300 group-hover:translate-x-1 group-hover:text-black transition-all" />
+                      </div>
+                   ))}
+                </div>
+                <button className="w-full mt-10 py-4 border border-black/10 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:border-black transition-colors">View All Analytics</button>
+             </div>
           </div>
         </section>
 
