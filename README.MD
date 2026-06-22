@@ -1,4 +1,4 @@
-Live Link : https://onecart-1-frontend32.onrender.com
+Live Link : https://onecart-frontend-beige.vercel.app
 
 🧑‍💻 Tech Stack
 Frontend
