@@ -396,12 +396,17 @@ function AiProductCard({ product, currency, onClick }) {
 
 function formatFilters(filters, currency) {
   const parts = [];
+  if (!filters) return "";
   if (filters.category)    parts.push(`Category: ${filters.category}`);
   if (filters.subCategory) parts.push(`Type: ${filters.subCategory}`);
   if (filters.brand)       parts.push(`Brand: ${filters.brand}`);
-  if (filters.minBudget != null || filters.maxBudget != null) {
-    const min = filters.minBudget != null ? `${currency}${filters.minBudget}` : "";
-    const max = filters.maxBudget != null ? `${currency}${filters.maxBudget}` : "";
+  
+  const minVal = filters.minBudget != null ? Number(filters.minBudget) : -1;
+  const maxVal = filters.maxBudget != null ? Number(filters.maxBudget) : -1;
+
+  if (minVal >= 0 || maxVal >= 0) {
+    const min = minVal >= 0 ? `${currency}${minVal}` : "";
+    const max = maxVal >= 0 ? `${currency}${maxVal}` : "";
     parts.push(`Budget: ${[min, max].filter(Boolean).join("–")}`);
   }
   return parts.join(" · ");
