@@ -7,32 +7,18 @@ let cachedCollection;
 let cachedVectorStore;
 
 /**
- * Lazily reads the environment variables when configuration is actually requested.
- * This prevents static ESM import ordering issues where environment variables
- * are read before dotenv.config() has executed.
+ * Reads Chroma configuration environment variables and returns a unified absolute URL endpoint.
  */
 function getChromaConfigInternal() {
-  // Support a single CHROMA_URL (e.g. https://your-chroma.onrender.com)
-  // OR individual CHROMA_HOST / CHROMA_PORT / CHROMA_SSL env vars.
   const CHROMA_URL = process.env.CHROMA_URL || "";
+  const CHROMA_HOST = process.env.CHROMA_HOST || "localhost";
+  const CHROMA_PORT = Number(process.env.CHROMA_PORT || 8001);
+  const CHROMA_SSL  = String(process.env.CHROMA_SSL || "false").toLowerCase() === "true";
 
-  let CHROMA_HOST, CHROMA_PORT, CHROMA_SSL;
-
-  if (CHROMA_URL) {
-    try {
-      const parsed = new URL(CHROMA_URL);
-      CHROMA_HOST = parsed.hostname;
-      CHROMA_PORT = Number(parsed.port) || (parsed.protocol === "https:" ? 443 : 80);
-      CHROMA_SSL  = parsed.protocol === "https:";
-    } catch {
-      CHROMA_HOST = "localhost";
-      CHROMA_PORT = 8001;
-      CHROMA_SSL  = false;
-    }
-  } else {
-    CHROMA_HOST = process.env.CHROMA_HOST || "localhost";
-    CHROMA_PORT = Number(process.env.CHROMA_PORT || 8001);
-    CHROMA_SSL  = String(process.env.CHROMA_SSL || "false").toLowerCase() === "true";
+  let resolvedUrl = CHROMA_URL;
+  if (!resolvedUrl) {
+    const protocol = CHROMA_SSL ? "https" : "http";
+    resolvedUrl = `${protocol}://${CHROMA_HOST}:${CHROMA_PORT}`;
   }
 
   const CHROMA_TENANT          = process.env.CHROMA_TENANT || "default_tenant";
@@ -40,9 +26,7 @@ function getChromaConfigInternal() {
   const CHROMA_COLLECTION_NAME = process.env.CHROMA_COLLECTION_NAME || process.env.CHROMA_PRODUCTS_COLLECTION || "onecart_products";
 
   return {
-    host: CHROMA_HOST,
-    port: CHROMA_PORT,
-    ssl:  CHROMA_SSL,
+    url: resolvedUrl,
     tenant: CHROMA_TENANT,
     database: CHROMA_DATABASE,
     collectionName: CHROMA_COLLECTION_NAME,
@@ -52,9 +36,8 @@ function getChromaConfigInternal() {
 export function getChromaClient() {
   if (!cachedClient) {
     const config = getChromaConfigInternal();
-    const url = process.env.CHROMA_URL || "";
     cachedClient = new ChromaClient({
-      ...(url ? { path: url } : { host: config.host, port: config.port, ssl: config.ssl }),
+      path: config.url,
       tenant: config.tenant,
       database: config.database,
     });
@@ -82,8 +65,7 @@ export async function getProductCollection() {
       });
     } catch (error) {
       throw new Error(
-        `Unable to initialize ChromaDB collection "${config.collectionName}" at ${config.host}:${config.port}. ` +
-          `Check CHROMA_HOST, CHROMA_PORT, CHROMA_SSL, CHROMA_TENANT, and CHROMA_DATABASE. Original error: ${error.message}`
+        `Unable to initialize ChromaDB collection "${config.collectionName}" at ${config.url}. Original error: ${error.message}`
       );
     }
   }
@@ -101,23 +83,12 @@ export async function getProductVectorStore() {
         {
           index: getChromaClient(),
           collectionName: config.collectionName,
-          clientParams: process.env.CHROMA_URL ? {
-            path: process.env.CHROMA_URL,
-            tenant: config.tenant,
-            database: config.database,
-          } : {
-            host: config.host,
-            port: config.port,
-            ssl: config.ssl,
-            tenant: config.tenant,
-            database: config.database,
-          },
+          url: config.url,
         }
       );
     } catch (error) {
       throw new Error(
-        `Unable to initialize LangChain Chroma vector store for collection "${config.collectionName}". ` +
-          `Confirm the Chroma server is running and reachable. Original error: ${error.message}`
+        `Unable to initialize LangChain Chroma vector store for collection "${config.collectionName}" at ${config.url}. Original error: ${error.message}`
       );
     }
   }
