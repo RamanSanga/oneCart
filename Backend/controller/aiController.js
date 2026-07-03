@@ -166,65 +166,79 @@ import { getChromaConfig } from "../ai/vectorStore.js";
 import { embedText } from "../ai/embedding.js";
 
 export async function healthAi(_req, res) {
-  const diagnostics = {
-    environment: {
-      GOOGLE_API_KEY: process.env.GOOGLE_API_KEY ? `Loaded (${process.env.GOOGLE_API_KEY.substring(0, 8)}...)` : "Missing",
-      GEMINI_MODEL: process.env.GEMINI_MODEL || "Not set (using default: gemini-2.5-flash)",
-      CHROMA_URL: process.env.CHROMA_URL || "Not set",
-      CHROMA_HOST: process.env.CHROMA_HOST || "Not set",
-      CHROMA_PORT: process.env.CHROMA_PORT || "Not set",
-    },
-    mongoDb: {
-      connected: mongoose.connection.readyState === 1,
-      state: mongoose.connection.readyState,
-    },
-    chromaDb: {
-      connected: false,
-      config: null,
-      collectionExists: false,
-      productCount: 0,
-      error: null,
-    },
-    embeddingPipeline: {
-      working: false,
-      error: null,
-    },
-    status: "healthy",
+  const checks = {
+    GOOGLE_API_KEY: false,
+    GEMINI_MODEL: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+    CHROMA_URL: "not set",
+    MongoDB: "disconnected",
+    ChromaDB: "disconnected",
+    CollectionExists: false,
+    VectorCount: 0,
+    GeminiTest: "failed"
   };
+  const errors = [];
 
-  // 1. Get Chroma Configuration
-  try {
-    diagnostics.chromaDb.config = getChromaConfig();
-  } catch (err) {
-    diagnostics.chromaDb.error = `Config read error: ${err.message}`;
+  // Check GOOGLE_API_KEY presence
+  if (process.env.GOOGLE_API_KEY) {
+    checks.GOOGLE_API_KEY = true;
+  } else {
+    errors.push("Environment: GOOGLE_API_KEY variable is missing.");
   }
 
-  // 2. Test ChromaDB Connection & Collection Count
+  // Check CHROMA_URL presence
+  if (process.env.CHROMA_URL) {
+    checks.CHROMA_URL = "loaded";
+  } else if (process.env.CHROMA_HOST) {
+    checks.CHROMA_URL = "loaded (legacy CHROMA_HOST set)";
+  } else {
+    errors.push("Environment: CHROMA_URL and CHROMA_HOST variables are missing.");
+  }
+
+  // Check MongoDB
+  try {
+    if (mongoose.connection.readyState === 1) {
+      checks.MongoDB = "connected";
+    } else {
+      checks.MongoDB = `disconnected (readyState: ${mongoose.connection.readyState})`;
+      errors.push(`MongoDB check failed: connection state is ${mongoose.connection.readyState}`);
+    }
+  } catch (err) {
+    checks.MongoDB = "failed";
+    errors.push(`MongoDB check error: ${err.message}`);
+  }
+
+  // Check ChromaDB Connection and Vector Count
   try {
     const vectorStore = await getProductVectorStore();
-    diagnostics.chromaDb.connected = true;
-    diagnostics.chromaDb.collectionExists = true;
-    
-    // Fetch product count
+    checks.ChromaDB = "connected";
+    checks.CollectionExists = true;
     const count = await vectorStore.collection.count();
-    diagnostics.chromaDb.productCount = count;
+    checks.VectorCount = count;
   } catch (err) {
-    diagnostics.chromaDb.error = `Connection/Count error: ${err.message}`;
-    diagnostics.status = "degraded";
+    checks.ChromaDB = "failed";
+    errors.push(`ChromaDB check failed: ${err.message}`);
   }
 
-  // 3. Test Embedding Generator Pipeline
+  // Check Gemini Embeddings Pipeline
   try {
     const testEmbedding = await embedText("Test product context");
-    diagnostics.embeddingPipeline.working = Array.isArray(testEmbedding) && testEmbedding.length > 0;
+    if (Array.isArray(testEmbedding) && testEmbedding.length > 0) {
+      checks.GeminiTest = "success";
+    } else {
+      errors.push("Gemini check failed: embedding array is empty or invalid format.");
+    }
   } catch (err) {
-    diagnostics.embeddingPipeline.error = `Embedding error: ${err.message}`;
-    diagnostics.status = "degraded";
+    checks.GeminiTest = "failed";
+    errors.push(`Gemini Embedding pipeline failed: ${err.message}`);
   }
+
+  const status = errors.length === 0 ? "healthy" : "degraded";
 
   return res.status(200).json({
     success: true,
-    diagnostics,
+    status,
+    checks,
+    errors
   });
 }
 
