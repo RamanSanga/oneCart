@@ -97,7 +97,7 @@ button { cursor: pointer; font-family: inherit; }
 /* --- Nav themes --- */
 .nav-transparent {
   background: transparent;
-  color: white;
+  color: var(--ink);
   border-bottom: 1px solid transparent;
 }
 .nav-scrolled {

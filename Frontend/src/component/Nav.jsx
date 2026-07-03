@@ -114,7 +114,7 @@ export default function Navbar() {
   }, [search, products]);
 
   const navClass = isHome ? "nav-transparent" : "nav-scrolled";
-  const iconColor = isHome ? "text-white" : "text-[var(--ink)]";
+  const iconColor = "text-[var(--ink)]";
 
   return (
     <>
@@ -158,11 +158,7 @@ export default function Navbar() {
               <Link
                 key={item.label}
                 to={item.path}
-                className={`relative text-[12px] font-medium tracking-wide transition-colors group pb-0.5 ${
-                  isHome
-                    ? "text-white/80 hover:text-white"
-                    : "text-[var(--ink-60)] hover:text-[var(--ink)]"
-                } ${location.pathname === item.path ? (isHome ? "!text-white" : "!text-[var(--ink)]") : ""}`}
+                className={`relative text-[12px] font-medium tracking-wide transition-colors group pb-0.5 text-[var(--ink-60)] hover:text-[var(--ink)] ${location.pathname === item.path ? "!text-[var(--ink)]" : ""}`}
               >
                 {item.label}
                 <span className={`absolute bottom-0 left-0 h-px bg-current transition-all duration-300 ${
@@ -215,7 +211,7 @@ export default function Navbar() {
               </button>
 
               {showMenu && (
-                <div className="absolute right-0 top-full mt-3 w-52 bg-white border border-[var(--border-md)] shadow-[0_8px_40px_rgba(0,0,0,0.10)] py-1 z-50 animate-fadeIn">
+                <div className="absolute right-0 top-full mt-3 w-52 bg-white text-[var(--ink)] border border-[var(--border-md)] shadow-[0_8px_40px_rgba(0,0,0,0.10)] py-1 z-50 animate-fadeIn">
                   {isLoggedIn ? (
                     <>
                       <div className="px-4 py-3 border-b border-[var(--border)]">
