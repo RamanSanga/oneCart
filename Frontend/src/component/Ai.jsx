@@ -160,7 +160,7 @@ function Ai() {
       {/* ── FLOATING PILL TRIGGER ── */}
       <button
         onClick={() => setOpen(prev => !prev)}
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[9998] flex items-center gap-2.5 px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] transition-all duration-300 border ${
+        className={`fixed bottom-6 right-6 z-[30] md:z-[9998] flex items-center gap-2.5 px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] transition-all duration-300 border ${
           open
             ? "bg-white text-[var(--ink)] border-[var(--border-md)] shadow-lg"
             : "bg-[var(--ink)] text-white border-transparent shadow-[0_8px_32px_rgba(0,0,0,0.25)] hover:bg-[var(--ink-80)]"
