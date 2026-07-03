@@ -7,42 +7,47 @@ let cachedCollection;
 let cachedVectorStore;
 
 /**
- * Reads Chroma configuration environment variables and returns a unified absolute URL endpoint.
+ * Resolves Chroma connection config from environment variables.
+ * Supports CHROMA_URL (full URL) or individual CHROMA_HOST / CHROMA_PORT / CHROMA_SSL vars.
+ * chromadb@3.5.x requires host, port, ssl — the `path` option is deprecated and fails.
  */
 function getChromaConfigInternal() {
   const CHROMA_URL = process.env.CHROMA_URL || "";
-  const CHROMA_HOST = process.env.CHROMA_HOST || "localhost";
-  const CHROMA_PORT = Number(process.env.CHROMA_PORT || 8001);
-  const CHROMA_SSL  = String(process.env.CHROMA_SSL || "false").toLowerCase() === "true";
+  let host, port, ssl;
 
-  let resolvedUrl = CHROMA_URL;
-  if (!resolvedUrl) {
-    const protocol = CHROMA_SSL ? "https" : "http";
-    resolvedUrl = `${protocol}://${CHROMA_HOST}:${CHROMA_PORT}`;
+  if (CHROMA_URL) {
+    try {
+      const parsed = new URL(CHROMA_URL);
+      host = parsed.hostname;
+      ssl  = parsed.protocol === "https:";
+      // If URL has an explicit port use it; otherwise default to 443 (https) or 80 (http)
+      port = parsed.port ? Number(parsed.port) : (ssl ? 443 : 80);
+    } catch {
+      host = "localhost";
+      port = 8001;
+      ssl  = false;
+    }
+  } else {
+    host = process.env.CHROMA_HOST || "localhost";
+    port = Number(process.env.CHROMA_PORT || 8001);
+    ssl  = String(process.env.CHROMA_SSL || "false").toLowerCase() === "true";
   }
 
-  const CHROMA_TENANT          = process.env.CHROMA_TENANT || "default_tenant";
-  const CHROMA_DATABASE        = process.env.CHROMA_DATABASE || "default_database";
-  const CHROMA_COLLECTION_NAME = process.env.CHROMA_COLLECTION_NAME || process.env.CHROMA_PRODUCTS_COLLECTION || "onecart_products";
+  const tenant         = process.env.CHROMA_TENANT || "default_tenant";
+  const database       = process.env.CHROMA_DATABASE || "default_database";
+  const collectionName = process.env.CHROMA_COLLECTION_NAME || process.env.CHROMA_PRODUCTS_COLLECTION || "onecart_products";
 
-  return {
-    url: resolvedUrl,
-    tenant: CHROMA_TENANT,
-    database: CHROMA_DATABASE,
-    collectionName: CHROMA_COLLECTION_NAME,
-  };
+  return { host, port, ssl, tenant, database, collectionName };
 }
 
+/**
+ * Returns a singleton ChromaClient using host/port/ssl (confirmed working in chromadb@3.5.x).
+ */
 export function getChromaClient() {
   if (!cachedClient) {
-    const config = getChromaConfigInternal();
-    cachedClient = new ChromaClient({
-      path: config.url,
-      tenant: config.tenant,
-      database: config.database,
-    });
+    const { host, port, ssl, tenant, database } = getChromaConfigInternal();
+    cachedClient = new ChromaClient({ host, port, ssl, tenant, database });
   }
-
   return cachedClient;
 }
 
@@ -52,47 +57,48 @@ export function getChromaConfig() {
 
 export async function getProductCollection() {
   if (!cachedCollection) {
-    const config = getChromaConfigInternal();
+    const { collectionName } = getChromaConfigInternal();
     try {
       const client = getChromaClient();
       cachedCollection = await client.getOrCreateCollection({
-        name: config.collectionName,
+        name: collectionName,
         embeddingFunction: null,
-        metadata: {
-          app: "oneCart",
-          domain: "products",
-        },
+        metadata: { app: "oneCart", domain: "products" },
       });
     } catch (error) {
+      const { host, port } = getChromaConfigInternal();
       throw new Error(
-        `Unable to initialize ChromaDB collection "${config.collectionName}" at ${config.url}. Original error: ${error.message}`
+        `Unable to initialize ChromaDB collection "${collectionName}" at ${host}:${port}. ` +
+        `Original error: ${error.message}`
       );
     }
   }
-
   return cachedCollection;
 }
 
+/**
+ * Returns a singleton LangChain Chroma vector store.
+ * Uses index: getChromaClient() directly — no clientParams or url override needed.
+ */
 export async function getProductVectorStore() {
   if (!cachedVectorStore) {
-    const config = getChromaConfigInternal();
+    const { collectionName, host, port } = getChromaConfigInternal();
     try {
       await getProductCollection();
       cachedVectorStore = await LangChainChroma.fromExistingCollection(
         getLangChainEmbeddings(),
         {
           index: getChromaClient(),
-          collectionName: config.collectionName,
-          url: config.url,
+          collectionName,
         }
       );
     } catch (error) {
       throw new Error(
-        `Unable to initialize LangChain Chroma vector store for collection "${config.collectionName}" at ${config.url}. Original error: ${error.message}`
+        `Unable to initialize LangChain Chroma vector store for collection "${collectionName}" at ${host}:${port}. ` +
+        `Original error: ${error.message}`
       );
     }
   }
-
   return cachedVectorStore;
 }
 
