@@ -32,8 +32,8 @@ const assistantPlanSchema = z.object({
   category: z.string().trim().default(""),
   subCategory: z.string().trim().default(""),
   brand: z.string().trim().default(""),
-  minBudget: z.number().nullable().default(null),
-  maxBudget: z.number().nullable().default(null),
+  minBudget: z.number().default(-1),
+  maxBudget: z.number().default(-1),
   limit: z.number().int().min(1).max(12).default(5),
   relatedTo: z.string().trim().default(""),
   compareProducts: z.array(z.string().trim()).default([]),
@@ -80,11 +80,11 @@ function buildWhereFromPlan(plan) {
     conditions.push({ brand: { $eq: plan.brand } });
   }
 
-  if (plan.minBudget != null && !isNaN(Number(plan.minBudget))) {
+  if (plan.minBudget != null && plan.minBudget >= 0) {
     conditions.push({ price: { $gte: Number(plan.minBudget) } });
   }
 
-  if (plan.maxBudget != null && !isNaN(Number(plan.maxBudget))) {
+  if (plan.maxBudget != null && plan.maxBudget >= 0) {
     conditions.push({ price: { $lte: Number(plan.maxBudget) } });
   }
 
@@ -322,17 +322,17 @@ async function synthesizeAssistantResponse({ question, plan, conversationContext
           category: z.string().trim().default(""),
           subCategory: z.string().trim().default(""),
           brand: z.string().trim().default(""),
-          minBudget: z.number().nullable().default(null),
-          maxBudget: z.number().nullable().default(null),
+          minBudget: z.number().default(-1),
+          maxBudget: z.number().default(-1),
         })
-        .default({ category: "", subCategory: "", brand: "", minBudget: null, maxBudget: null }),
+        .default({ category: "", subCategory: "", brand: "", minBudget: -1, maxBudget: -1 }),
       comparison: z
         .object({
           productA: z
             .object({
               id: z.string().default(""),
               name: z.string().default(""),
-              price: z.number().nullable().default(null),
+              price: z.number().default(0),
               brand: z.string().default(""),
               category: z.string().default(""),
               description: z.string().default(""),
@@ -342,7 +342,7 @@ async function synthesizeAssistantResponse({ question, plan, conversationContext
             .object({
               id: z.string().default(""),
               name: z.string().default(""),
-              price: z.number().nullable().default(null),
+              price: z.number().default(0),
               brand: z.string().default(""),
               category: z.string().default(""),
               description: z.string().default(""),
