@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { answerProductQuestion, retrieveProductContext } from "../ai/ragChain.js";
 import { getProductVectorStore } from "../ai/vectorStore.js";
+import { indexAllProducts } from "../ai/productIndexer.js";
 
 // Validation schema supporting both frontend compatible 'query' and standard 'message' keys
 const aiQuerySchema = z.object({
@@ -192,4 +193,26 @@ export async function healthAi(_req, res) {
     embedding: "MiniLM",
     status,
   });
+}
+
+// POST /api/ai/reindex — Admin-only bulk re-index of all products into ChromaDB
+export async function reindexAi(req, res) {
+  const secret = req.headers["x-admin-secret"] || req.body?.secret || "";
+  const expected = process.env.ADMIN_REINDEX_SECRET || "";
+
+  if (expected && secret !== expected) {
+    return res.status(403).json({ success: false, message: "Unauthorized." });
+  }
+
+  try {
+    const result = await indexAllProducts();
+    return res.status(200).json({
+      success: true,
+      message: `Re-indexed ${result.indexed} products into ChromaDB.`,
+      indexed: result.indexed,
+    });
+  } catch (error) {
+    console.error("[AI Reindex] Failed:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
 }

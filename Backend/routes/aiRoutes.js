@@ -1,6 +1,6 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
-import { chatAi, healthAi, searchAi } from "../controller/aiController.js";
+import { chatAi, healthAi, searchAi, reindexAi } from "../controller/aiController.js";
 
 const aiRoutes = express.Router();
 
@@ -20,8 +20,9 @@ const aiRateLimiter = rateLimit({
   },
 });
 
-aiRoutes.get("/health", healthAi);
-aiRoutes.post("/chat", aiRateLimiter, chatAi);
+aiRoutes.get("/health",  healthAi);
+aiRoutes.post("/chat",   aiRateLimiter, chatAi);
 aiRoutes.post("/search", aiRateLimiter, searchAi);
+aiRoutes.post("/reindex", reindexAi);
 
 export default aiRoutes;

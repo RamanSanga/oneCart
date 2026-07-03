@@ -12,17 +12,37 @@ let cachedVectorStore;
  * are read before dotenv.config() has executed.
  */
 function getChromaConfigInternal() {
-  const CHROMA_HOST = process.env.CHROMA_HOST || "localhost";
-  const CHROMA_PORT = Number(process.env.CHROMA_PORT || 8000);
-  const CHROMA_SSL = String(process.env.CHROMA_SSL || "false").toLowerCase() === "true";
-  const CHROMA_TENANT = process.env.CHROMA_TENANT || "default_tenant";
-  const CHROMA_DATABASE = process.env.CHROMA_DATABASE || "default_database";
+  // Support a single CHROMA_URL (e.g. https://your-chroma.onrender.com)
+  // OR individual CHROMA_HOST / CHROMA_PORT / CHROMA_SSL env vars.
+  const CHROMA_URL = process.env.CHROMA_URL || "";
+
+  let CHROMA_HOST, CHROMA_PORT, CHROMA_SSL;
+
+  if (CHROMA_URL) {
+    try {
+      const parsed = new URL(CHROMA_URL);
+      CHROMA_HOST = parsed.hostname;
+      CHROMA_PORT = Number(parsed.port) || (parsed.protocol === "https:" ? 443 : 80);
+      CHROMA_SSL  = parsed.protocol === "https:";
+    } catch {
+      CHROMA_HOST = "localhost";
+      CHROMA_PORT = 8001;
+      CHROMA_SSL  = false;
+    }
+  } else {
+    CHROMA_HOST = process.env.CHROMA_HOST || "localhost";
+    CHROMA_PORT = Number(process.env.CHROMA_PORT || 8001);
+    CHROMA_SSL  = String(process.env.CHROMA_SSL || "false").toLowerCase() === "true";
+  }
+
+  const CHROMA_TENANT          = process.env.CHROMA_TENANT || "default_tenant";
+  const CHROMA_DATABASE        = process.env.CHROMA_DATABASE || "default_database";
   const CHROMA_COLLECTION_NAME = process.env.CHROMA_COLLECTION_NAME || process.env.CHROMA_PRODUCTS_COLLECTION || "onecart_products";
 
   return {
     host: CHROMA_HOST,
     port: CHROMA_PORT,
-    ssl: CHROMA_SSL,
+    ssl:  CHROMA_SSL,
     tenant: CHROMA_TENANT,
     database: CHROMA_DATABASE,
     collectionName: CHROMA_COLLECTION_NAME,
