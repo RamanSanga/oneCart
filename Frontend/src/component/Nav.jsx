@@ -315,7 +315,7 @@ export default function Navbar() {
 
       {/* ── MOBILE NAV FULLSCREEN ── */}
       {showMobileNav && (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Mobile navigation">
+        <div className="fixed inset-0 z-[9999] md:hidden" role="dialog" aria-modal="true" aria-label="Mobile navigation">
           <div className="absolute inset-0 bg-[var(--ink)]">
             <div className="flex flex-col h-full px-8 pt-8 pb-12 overflow-y-auto">
               {/* header */}
@@ -333,7 +333,7 @@ export default function Navbar() {
                     key={item.label}
                     to={item.path}
                     className="text-white text-[26px] font-light font-display border-b border-white/10 py-4 tracking-tight leading-tight hover:text-white/60 transition-colors"
-                    style={{ animationDelay: `${i * 60}ms` }}
+                    style={{ color: "#ffffff", animationDelay: `${i * 60}ms` }}
                   >
                     {item.label}
                   </Link>
