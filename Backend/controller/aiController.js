@@ -208,6 +208,26 @@ export async function healthAi(_req, res) {
   }
 
   // Check ChromaDB Connection and Vector Count
+  // Reset cached clients so each health check makes a fresh live connection
+  try {
+    const { resetProductCollectionCache, resetProductVectorStoreCache } = await import("../ai/vectorStore.js");
+    await resetProductCollectionCache();
+    await resetProductVectorStoreCache();
+  } catch (_) { /* ignore */ }
+
+  // Show the exact URL the backend will dial
+  const chromaConfig = (() => {
+    const url  = process.env.CHROMA_URL || "";
+    if (url) {
+      try {
+        const p = new URL(url);
+        return { host: p.hostname, port: p.port || (p.protocol === "https:" ? 443 : 80), ssl: p.protocol === "https:", raw: url };
+      } catch { return { raw: url, parseError: true }; }
+    }
+    return { host: process.env.CHROMA_HOST || "localhost", port: process.env.CHROMA_PORT || 8001, ssl: false, raw: null };
+  })();
+  checks.chromaConfig = chromaConfig;
+
   try {
     const vectorStore = await getProductVectorStore();
     checks.ChromaDB = "connected";
@@ -216,7 +236,15 @@ export async function healthAi(_req, res) {
     checks.VectorCount = count;
   } catch (err) {
     checks.ChromaDB = "failed";
-    errors.push(`ChromaDB check failed: ${err.message}`);
+    // Expose raw cause: Node.js network error codes (ECONNREFUSED, ETIMEDOUT, ENOTFOUND, etc.)
+    const cause = err.cause || err;
+    errors.push({
+      message: err.message,
+      causeMessage: cause?.message || null,
+      causeCode: cause?.code || null,
+      causeHostname: cause?.hostname || null,
+      rawCause: String(cause)
+    });
   }
 
   // Check Gemini Embeddings Pipeline
