@@ -108,7 +108,7 @@ function Home() {
         <div className="max-w-[1440px] mx-auto grid lg:grid-cols-12 gap-12 lg:gap-20 items-center">
           <div className="lg:col-span-5 aspect-[3/4] overflow-hidden bg-[#EEECEA]">
             <img 
-              src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000&auto=format&fit=crop" 
+              src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=600&q=70" 
               alt="Model wearing camel coat walking cobblestone street" 
               className="w-full h-full object-cover object-center hover:scale-[1.02] transition-transform duration-700" 
               loading="lazy"
@@ -164,7 +164,7 @@ function Home() {
           {/* right image */}
           <div className="lg:col-span-5 aspect-[3/4] overflow-hidden bg-[#EEECEA] order-1 lg:order-2">
             <img 
-              src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000&auto=format&fit=crop" 
+              src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=70" 
               alt="Model wearing oversized coat in Scandinavian living room" 
               className="w-full h-full object-cover object-center hover:scale-[1.02] transition-transform duration-700" 
               loading="lazy"

@@ -68,10 +68,10 @@ export default function HeroPremium({ heroData, heroCount = 0, totalSlides = 1 }
 
               {/* Headline */}
               <h1 className="font-display font-light leading-[1.05] tracking-tight text-[var(--ink)]"
-                  style={{ fontSize: "clamp(42px, 6vw, 84px)" }}>
+                  style={{ fontSize: "clamp(34px, 5vw, 76px)" }}>
                 {title}
                 <br />
-                <em className="font-display italic text-[var(--ink-60)]" style={{ fontSize: "clamp(28px, 4vw, 56px)" }}>
+                <em className="font-display italic text-[var(--ink-60)]" style={{ fontSize: "clamp(22px, 3.5vw, 48px)" }}>
                   {subtitle}
                 </em>
               </h1>

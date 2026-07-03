@@ -74,7 +74,7 @@ function Card({ name, image, hoverImage, id, price }) {
           {/* Wishlist button */}
           <button
             onClick={handleWishlist}
-            className={`absolute top-3 right-3 z-20 w-7 h-7 bg-white/85 backdrop-blur-sm flex items-center justify-center transition-opacity ${hovered ? "opacity-100" : "opacity-0"}`}
+            className={`absolute top-3 right-3 z-20 w-7 h-7 bg-white/85 backdrop-blur-sm flex items-center justify-center transition-all md:opacity-0 group-hover:opacity-100 opacity-100`}
             aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
           >
             <FiHeart
@@ -88,9 +88,7 @@ function Card({ name, image, hoverImage, id, price }) {
           {!outOfStock && (
             <button
               onClick={handleQuickAdd}
-              className={`absolute bottom-0 left-0 right-0 z-20 bg-[var(--ink)] text-white py-3 text-[9px] font-semibold uppercase tracking-[0.18em] transition-all duration-300 hover:bg-[var(--ink-80)] ${
-                hovered ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
-              }`}
+              className={`absolute bottom-0 left-0 right-0 z-20 bg-[var(--ink)] text-white py-3 text-[9px] font-semibold uppercase tracking-[0.18em] transition-all duration-300 hover:bg-[var(--ink-80)] translate-y-0 opacity-100 md:translate-y-full md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100`}
             >
               {product?.sizes?.length > 1 ? "Select Size" : "Add to Bag"}
             </button>

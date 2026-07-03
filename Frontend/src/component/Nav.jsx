@@ -126,7 +126,7 @@ export default function Navbar() {
       )}
 
       <nav
-        className={`w-full fixed left-0 z-40 transition-all duration-300 ${navClass} ${banner.active && banner.text ? "top-[34px]" : "top-0"}`}
+        className={`w-full fixed left-0 z-40 transition-all duration-300 ${navClass} ${banner.active && banner.text && !isScrolled ? "top-[37px]" : "top-0"}`}
         role="navigation"
         aria-label="Primary"
       >
