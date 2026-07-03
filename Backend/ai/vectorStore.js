@@ -52,10 +52,9 @@ function getChromaConfigInternal() {
 export function getChromaClient() {
   if (!cachedClient) {
     const config = getChromaConfigInternal();
+    const url = process.env.CHROMA_URL || "";
     cachedClient = new ChromaClient({
-      host: config.host,
-      port: config.port,
-      ssl: config.ssl,
+      ...(url ? { path: url } : { host: config.host, port: config.port, ssl: config.ssl }),
       tenant: config.tenant,
       database: config.database,
     });
@@ -102,7 +101,11 @@ export async function getProductVectorStore() {
         {
           index: getChromaClient(),
           collectionName: config.collectionName,
-          clientParams: {
+          clientParams: process.env.CHROMA_URL ? {
+            path: process.env.CHROMA_URL,
+            tenant: config.tenant,
+            database: config.database,
+          } : {
             host: config.host,
             port: config.port,
             ssl: config.ssl,
