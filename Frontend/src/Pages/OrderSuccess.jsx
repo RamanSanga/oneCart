@@ -1,68 +1,53 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { FiCheck } from "react-icons/fi";
 
-function OrderSuccess() {
+export default function OrderSuccess() {
   const navigate = useNavigate();
 
   return (
-    <section className="min-h-screen flex items-center justify-center bg-white px-6">
-      <div className="max-w-md w-full text-center">
-
-        {/* SUCCESS ICON */}
-        <div className="mx-auto mb-10 w-20 h-20 rounded-full border border-green-200 flex items-center justify-center">
-          <svg
-            className="w-10 h-10 text-green-600"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
+    <div
+      className="min-h-screen bg-[var(--cream)] flex items-center justify-center px-6 text-center"
+      style={{ paddingTop: "var(--nav-height)" }}
+    >
+      <div className="max-w-sm w-full">
+        {/* icon */}
+        <div className="w-14 h-14 border border-[var(--border-md)] flex items-center justify-center mx-auto mb-10 text-[var(--ink-40)]">
+          <FiCheck size={22} strokeWidth={1.5} />
         </div>
 
-        {/* TITLE */}
-        <h1 className="text-3xl md:text-4xl font-light tracking-wide mb-4">
-          Order Confirmed
+        <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-4">OneCart</p>
+
+        <h1
+          className="font-display font-light text-[var(--ink)] mb-4 leading-tight"
+          style={{ fontSize: "clamp(26px, 4vw, 42px)" }}
+        >
+          Order confirmed.
         </h1>
 
-        {/* SUBTEXT */}
-        <p className="text-gray-500 text-sm md:text-base mb-12 leading-relaxed">
-          Thank you for your purchase. Your order has been placed successfully
-          and is now being processed.
+        <p className="text-[13px] font-light text-[var(--ink-60)] leading-relaxed mb-12 max-w-[36ch] mx-auto">
+          Thank you for your purchase. Your order is now being prepared and you'll receive a confirmation shortly.
         </p>
 
-        {/* ACTION BUTTONS */}
-        <div className="flex flex-col sm:flex-row justify-center gap-4">
-
-          {/* VIEW ORDERS */}
+        <div className="flex flex-col gap-3">
           <button
             onClick={() => navigate("/order")}
-            className="px-8 py-3 border border-black text-sm tracking-wide hover:bg-black hover:text-white transition"
+            className="w-full py-4 bg-[var(--ink)] text-white text-[10px] font-semibold uppercase tracking-[0.2em] hover:bg-[var(--ink-80)] transition-colors"
           >
             View My Orders
           </button>
-
-          {/* CONTINUE SHOPPING */}
           <button
             onClick={() => navigate("/collection")}
-            className="px-8 py-3 border border-gray-300 text-sm tracking-wide hover:border-black transition"
+            className="w-full py-4 border border-[var(--border-md)] text-[var(--ink)] text-[10px] font-semibold uppercase tracking-[0.2em] hover:border-[var(--ink)] transition-colors"
           >
             Continue Shopping
           </button>
-
-          {/* HOME */}
-          <button
-            onClick={() => navigate("/")}
-            className="px-8 py-3 bg-black text-white text-sm tracking-wide hover:opacity-90 transition"
-          >
-            Go to Home
-          </button>
-
         </div>
+
+        <p className="mt-10 text-[10px] text-[var(--ink-30)] uppercase tracking-widest">
+          Need help? <Link to="/contact" className="underline hover:text-[var(--ink)] transition-colors">Contact us</Link>
+        </p>
       </div>
-    </section>
+    </div>
   );
 }
-
-export default OrderSuccess;

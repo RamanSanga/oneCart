@@ -6,7 +6,7 @@ const productSchema = new mongoose.Schema(
 
     description: { type: String, trim: true },
 
-    price: { type: Number, required: true, min: 0 },
+    price: { type: Number, required: true, min: 0, index: true },
 
     // ✅ STOCK PER SIZE (STRICT)
     stock: {
@@ -26,10 +26,11 @@ const productSchema = new mongoose.Schema(
       default: [],
     },
 
-    category: { type: String, trim: true },
-    subCategory: { type: String, trim: true },
+    category: { type: String, trim: true, index: true },
+    subCategory: { type: String, trim: true, index: true },
+    brand: { type: String, trim: true, default: "" },
 
-    bestSeller: { type: Boolean, default: false },
+    bestSeller: { type: Boolean, default: false, index: true },
 
     image1: { type: String, required: true },
     image2: { type: String },

@@ -3,7 +3,7 @@ import Order from "../model/orderModel.js";
 import Review from "../model/reviewModel.js";
 import Setting from "../model/settingModel.js";
 import StockAlert from "../model/stockAlertModel.js";
-import Lead from "../models/leadModel.js";
+import Lead from "../model/leadModel.js";
 
 export const getAdminStats = async (req, res) => {
   try {

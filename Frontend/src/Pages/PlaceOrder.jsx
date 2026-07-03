@@ -2,159 +2,127 @@ import React, { useContext, useEffect, useState } from "react";
 import { shopDataContext } from "../Context/ShopContext";
 import { userDataContext } from "../Context/UserContext";
 import { authDataContext } from "../Context/AuthContext.jsx";
-import { useNavigate } from "react-router-dom";
+import { useNavigate }     from "react-router-dom";
 import razorpayImg from "../assets/razorpay.png";
-import axios from "axios";
+import axios       from "axios";
 import { useToast } from "../Context/ToastContext";
-import { FiArrowRight, FiShield, FiTruck, FiCreditCard } from "react-icons/fi";
+import { FiArrowRight, FiShield, FiTruck } from "react-icons/fi";
 
-function PlaceOrder() {
+const FIELDS = [
+  { name: "firstName",  label: "First Name",   span: false },
+  { name: "lastName",   label: "Last Name",    span: false },
+  { name: "email",      label: "Email",        span: true  },
+  { name: "phone",      label: "Phone",        span: true  },
+  { name: "street",     label: "Street Address", span: true },
+  { name: "city",       label: "City",         span: false },
+  { name: "state",      label: "State",        span: false },
+  { name: "pincode",    label: "PIN Code",     span: false },
+  { name: "country",    label: "Country",      span: false },
+];
+
+export default function PlaceOrder() {
   const navigate = useNavigate();
-  const toast = useToast();
+  const toast    = useToast();
 
   const {
-    cartItem,
-    products,
-    currency,
-    delivery_fee,
-    getCartAmount,
-    setCartItem,
-    getStockForSize,
-    productsLoading,
-    discountAmount: couponDiscount,
+    cartItem, products, currency, delivery_fee,
+    getCartAmount, setCartItem, getStockForSize,
+    productsLoading, discountAmount: couponDiscount,
   } = useContext(shopDataContext);
 
   const { userData, getCurrentUser } = useContext(userDataContext);
-  const { serverUrl } = useContext(authDataContext);
+  const { serverUrl }                = useContext(authDataContext);
 
-  const [method, setMethod] = useState("cod");
+  const [method,       setMethod]       = useState("cod");
   const [cartProducts, setCartProducts] = useState([]);
-  const [subTotal, setSubTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    street: "",
-    city: "",
-    state: "",
-    pincode: "",
-    country: "",
-    phone: "",
+  const [subTotal,     setSubTotal]     = useState(0);
+  const [loading,      setLoading]      = useState(false);
+  const [formData,     setFormData]     = useState({
+    firstName: "", lastName: "", email: "", street: "",
+    city: "", state: "", pincode: "", country: "", phone: "",
   });
 
-  const isFirstOrderDiscount =
-    userData?.email?.endsWith("@gmail.com") &&
-    userData?.discountUsed === false;
-
-  const discountPercent = isFirstOrderDiscount ? 20 : 0;
-  const discountAmount = (subTotal * discountPercent) / 100;
+  const isFirstOrderDiscount = userData?.email?.endsWith("@gmail.com") && userData?.discountUsed === false;
+  const firstOrderDisc       = isFirstOrderDiscount ? subTotal * 0.2 : 0;
+  const total = subTotal - firstOrderDisc - (couponDiscount || 0) + (delivery_fee || 0);
 
   useEffect(() => {
     const items = [];
-    for (const productId in cartItem) {
-      const product = products.find((p) => p._id === productId);
-      if (!product) continue;
-      for (const size in cartItem[productId]) {
-        const qty = cartItem[productId][size];
-        if (qty > 0) {
-          items.push({ _id: product._id, name: product.name, price: product.price, size, quantity: qty, image1: product.image1 });
-        }
+    for (const pid in cartItem) {
+      const p = products.find(x => x._id === pid);
+      if (!p) continue;
+      for (const size in cartItem[pid]) {
+        const qty = cartItem[pid][size];
+        if (qty > 0) items.push({ _id: p._id, name: p.name, price: p.price, size, quantity: qty, image1: p.image1 });
       }
     }
     setCartProducts(items);
   }, [cartItem, products]);
 
   useEffect(() => {
-    const calc = async () => {
-      const amount = await getCartAmount();
-      setSubTotal(amount || 0);
-    };
-    calc();
+    setSubTotal(getCartAmount() || 0);
   }, [cartItem, getCartAmount]);
 
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = e => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
-  const loadRazorpayScript = () =>
-    new Promise((resolve) => {
-      if (document.getElementById("razorpay-script")) return resolve(true);
-      const script = document.createElement("script");
-      script.id = "razorpay-script";
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
+  const loadRazorpay = () => new Promise(resolve => {
+    if (document.getElementById("razorpay-script")) return resolve(true);
+    const s = document.createElement("script");
+    s.id    = "razorpay-script";
+    s.src   = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload  = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
+  });
 
-  const placeOrderHandler = async () => {
-    console.log("placeOrderHandler called");
-    console.log("cartProducts:", cartProducts);
-    if (cartProducts.length === 0) {
-      console.log("Cart is empty");
-      return;
-    }
-    
-    // Simple validation
-    const requiredFields = ["firstName", "lastName", "email", "street", "city", "state", "pincode", "country", "phone"];
-    const missingFields = requiredFields.filter(f => !formData[f]);
-    if (missingFields.length > 0) {
-      console.log("Missing fields:", missingFields);
-      toast.error({ title: "Missing Information", message: "Please fill in all delivery details." });
+  const placeOrder = async () => {
+    if (cartProducts.length === 0) return;
+    const missing = Object.entries(formData).filter(([k, v]) => !v).map(([k]) => k);
+    if (missing.length) {
+      toast.error({ title: "Missing details", message: "Please fill in all delivery fields." });
       return;
     }
 
     setLoading(true);
 
-    // Final Stock Check
     for (const item of cartProducts) {
-      const product = products.find(p => p._id === item._id);
-      const available = getStockForSize(product, item.size);
-      if (available < item.quantity) {
-        toast.error({ 
-          title: "Stock Changed", 
-          message: `${item.name} (${item.size}) is no longer available in the requested quantity.` 
-        });
+      const p       = products.find(x => x._id === item._id);
+      const inStock = getStockForSize(p, item.size);
+      if (inStock < item.quantity) {
+        toast.error({ title: "Stock changed", message: `${item.name} (${item.size}) is no longer available in the requested quantity.` });
         setLoading(false);
         return;
       }
     }
 
     try {
-      const amountToPay = subTotal - discountAmount - (couponDiscount || 0) + (delivery_fee || 0);
+      const amountToPay = Math.max(0, total);
 
       if (method === "cod") {
-        const orderData = {
-          address: formData,
-          paymentMethod: "cod",
-          items: cartProducts,
-          amount: amountToPay,
-        };
-        const res = await axios.post(`${serverUrl}/api/order/placeorder`, orderData, { withCredentials: true });
+        const res = await axios.post(`${serverUrl}/api/order/placeorder`,
+          { address: formData, paymentMethod: "cod", items: cartProducts, amount: amountToPay },
+          { withCredentials: true }
+        );
         if (res.status === 200 || res.status === 201) {
           setCartItem({});
           await getCurrentUser();
-          toast.success({ title: "Order Placed", message: "Your order has been successfully placed!" });
           navigate("/ordersuccess");
         }
         return;
       }
 
-      // Razorpay flow
-      const createRes = await axios.post(
-        `${serverUrl}/api/rajor/create-order`,
+      // Razorpay
+      const createRes = await axios.post(`${serverUrl}/api/rajor/create-order`,
         { amount: amountToPay, items: cartProducts, address: formData },
         { withCredentials: true }
       );
-
       const { razorpayOrder, orderId, keyId } = createRes.data;
       if (!razorpayOrder || !orderId) throw new Error("Failed to create payment order");
 
-      const ok = await loadRazorpayScript();
-      if (!ok) throw new Error("Failed to load Razorpay checkout");
+      const ok = await loadRazorpay();
+      if (!ok) throw new Error("Failed to load Razorpay");
 
-      const options = {
+      new window.Razorpay({
         key: keyId,
         amount: razorpayOrder.amount,
         currency: razorpayOrder.currency,
@@ -162,167 +130,176 @@ function PlaceOrder() {
         description: "Secure Order Payment",
         order_id: razorpayOrder.id,
         prefill: {
-          name: `${formData.firstName} ${formData.lastName}`.trim() || userData?.name || "",
-          email: formData.email || userData?.email || "",
-          contact: formData.phone || userData?.phone || "",
+          name:    `${formData.firstName} ${formData.lastName}`.trim() || userData?.name || "",
+          email:   formData.email  || userData?.email || "",
+          contact: formData.phone  || "",
         },
-        handler: async function (response) {
+        handler: async response => {
           try {
-            await axios.post(
-              `${serverUrl}/api/rajor/verify`,
-              {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                orderId,
-              },
+            await axios.post(`${serverUrl}/api/rajor/verify`,
+              { razorpay_order_id: response.razorpay_order_id, razorpay_payment_id: response.razorpay_payment_id, razorpay_signature: response.razorpay_signature, orderId },
               { withCredentials: true }
             );
-
             setCartItem({});
             await getCurrentUser();
-            toast.success({ title: "Payment Successful", message: "Your order is being processed." });
             navigate("/ordersuccess");
-          } catch (err) {
-            toast.error({ title: "Verification Failed", message: "Please contact support for your payment." });
+          } catch {
+            toast.error({ title: "Verification failed", message: "Contact support if amount was debited." });
           }
         },
-        theme: { color: "#000000" },
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch (error) {
-      toast.error({ 
-        title: "Order Failed", 
-        message: error?.response?.data?.message || error.message || "Something went wrong." 
-      });
+        theme: { color: "#0A0A0A" },
+      }).open();
+    } catch (err) {
+      toast.error({ title: "Order failed", message: err?.response?.data?.message || err.message || "Something went wrong." });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <section className="pt-[120px] pb-32 bg-[#faf9f5] min-h-screen">
-      <div className="max-w-7xl mx-auto px-6 md:px-10">
-        
-        <div className="flex flex-col md:flex-row items-center gap-4 mb-16">
-           <div className="h-[1px] w-12 bg-black hidden md:block" />
-           <h1 className="text-4xl md:text-5xl font-light tracking-tight text-gray-950">Complete <span className="italic">Order</span></h1>
+    <div className="min-h-screen bg-[var(--cream)]" style={{ paddingTop: "var(--nav-height)" }}>
+      <div className="max-w-[1440px] mx-auto px-6 md:px-10 lg:px-16 py-10 md:py-14">
+
+        {/* Header */}
+        <div className="border-b border-[var(--border)] pb-8 mb-12">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-2">OneCart</p>
+          <h1 className="font-display font-light text-[var(--ink)]" style={{ fontSize: "clamp(26px, 3.5vw, 44px)" }}>
+            Checkout
+          </h1>
         </div>
 
+        {/* First order banner */}
         {isFirstOrderDiscount && (
-          <div className="mb-12 rounded-[24px] bg-emerald-50 border border-emerald-100 p-6 flex items-center gap-4 animate-in fade-in slide-in-from-top-2">
-            <div className="h-10 w-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg">
-              <span className="font-bold text-sm">%</span>
-            </div>
+          <div className="mb-10 border border-[var(--border-md)] bg-white px-6 py-4 flex items-center gap-4">
+            <div className="w-7 h-7 bg-[var(--ink)] text-white flex items-center justify-center text-[11px] font-bold shrink-0">%</div>
             <div>
-              <p className="text-emerald-900 font-medium">Welcome Discount Applied!</p>
-              <p className="text-emerald-600 text-sm">20% off your first order as a new member.</p>
+              <p className="text-[12px] font-medium text-[var(--ink)]">First order discount applied</p>
+              <p className="text-[11px] font-light text-[var(--ink-40)]">20% off for new members · saving {currency}{firstOrderDisc.toFixed(2)}</p>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
-          {/* DELIVERY INFO */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+
+          {/* ── DELIVERY FORM ── */}
           <div className="lg:col-span-7">
-            <div className="bg-white rounded-[40px] p-8 md:p-12 border border-gray-100 shadow-[0_20px_80px_rgba(0,0,0,0.03)]">
-              <h2 className="text-xl font-medium tracking-widest uppercase text-gray-400 mb-10 flex items-center gap-3">
-                <FiTruck size={20} className="text-black" />
-                Delivery Information
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {Object.keys(formData).map((key) => (
-                  <div key={key} className={key === "email" || key === "street" || key === "phone" ? "md:col-span-2" : ""}>
-                    <input
-                      name={key}
-                      value={formData[key]}
-                      onChange={handleChange}
-                      placeholder={key.replace(/^\w/, (c) => c.toUpperCase())}
-                      className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-black/5 transition-all"
-                    />
-                  </div>
-                ))}
-              </div>
+            <div className="flex items-center gap-3 mb-8">
+              <FiTruck size={14} className="text-[var(--ink-40)]" />
+              <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)]">Delivery Details</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-8">
+              {FIELDS.map(field => (
+                <div key={field.name} className={field.span ? "sm:col-span-2" : ""}>
+                  <label className="block text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--ink-40)] mb-2">
+                    {field.label}
+                  </label>
+                  <input
+                    name={field.name}
+                    value={formData[field.name]}
+                    onChange={handleChange}
+                    type={field.name === "email" ? "email" : field.name === "phone" ? "tel" : "text"}
+                    className="input-underline"
+                    placeholder={field.label}
+                    autoComplete={field.name === "email" ? "email" : field.name === "phone" ? "tel" : "off"}
+                  />
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* SUMMARY & PAYMENT */}
-          <div className="lg:col-span-5 space-y-8">
-            {/* ORDER SUMMARY */}
-            <div className="bg-white rounded-[40px] p-8 md:p-10 border border-gray-100 shadow-[0_20px_80px_rgba(0,0,0,0.03)]">
-              <h2 className="text-xl font-medium tracking-widest uppercase text-gray-400 mb-8">Summary</h2>
-              
-              <div className="space-y-4 mb-8">
-                <div className="flex justify-between text-gray-500">
-                  <span className="text-sm uppercase tracking-widest">Subtotal</span>
-                  <span className="font-medium text-gray-950">{currency}{subTotal.toFixed(2)}</span>
-                </div>
+          {/* ── ORDER SUMMARY ── */}
+          <div className="lg:col-span-5">
+            <div className="bg-white border border-[var(--border)] p-8 sticky" style={{ top: "calc(var(--nav-height) + 24px)" }}>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-8">Order Summary</p>
 
+              {/* Items */}
+              <div className="space-y-3 mb-6 max-h-52 overflow-y-auto no-scrollbar">
+                {cartProducts.map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="w-10 h-12 bg-[#EEECEA] shrink-0 overflow-hidden">
+                      <img src={item.image1} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-light text-[var(--ink)] truncate">{item.name}</p>
+                      <p className="text-[10px] text-[var(--ink-40)] uppercase tracking-widest">Size {item.size} · ×{item.quantity}</p>
+                    </div>
+                    <p className="text-[12px] font-medium text-[var(--ink)] tabular-nums shrink-0">{currency}{(item.price * item.quantity).toFixed(0)}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Totals */}
+              <div className="space-y-2.5 text-[12px] border-t border-[var(--border)] pt-5 mb-6">
+                <div className="flex justify-between text-[var(--ink-60)]">
+                  <span>Subtotal</span>
+                  <span className="tabular-nums">{currency}{subTotal.toFixed(2)}</span>
+                </div>
                 {isFirstOrderDiscount && (
-                  <div className="flex justify-between text-emerald-600">
-                    <span className="text-sm uppercase tracking-widest">First Order (20%)</span>
-                    <span className="font-medium">- {currency}{discountAmount.toFixed(2)}</span>
+                  <div className="flex justify-between text-[var(--ink)]">
+                    <span>First Order (−20%)</span>
+                    <span className="tabular-nums">−{currency}{firstOrderDisc.toFixed(2)}</span>
                   </div>
                 )}
-
-                <div className="flex justify-between text-gray-500">
-                  <span className="text-sm uppercase tracking-widest">Delivery</span>
-                  <span className="font-medium text-gray-950">{currency}{delivery_fee.toFixed(2)}</span>
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between text-[var(--ink)]">
+                    <span>Promo</span>
+                    <span className="tabular-nums">−{currency}{couponDiscount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-[var(--ink-60)]">
+                  <span>Shipping</span>
+                  <span className="tabular-nums">{currency}{delivery_fee.toFixed(2)}</span>
                 </div>
-
-                <div className="pt-6 border-t border-gray-50 flex justify-between items-center">
-                  <span className="font-medium text-gray-900 uppercase tracking-widest">Total to pay</span>
-                  <span className="text-3xl font-semibold text-gray-950">
-                    {currency}{(subTotal - discountAmount - (couponDiscount || 0) + (delivery_fee || 0)).toFixed(2)}
-                  </span>
+                <div className="border-t border-[var(--border)] pt-2.5 flex justify-between font-medium text-[var(--ink)] text-[14px]">
+                  <span>Total</span>
+                  <span className="tabular-nums">{currency}{total.toFixed(2)}</span>
                 </div>
               </div>
 
-              {/* PAYMENT METHODS */}
-              <h2 className="text-xl font-medium tracking-widest uppercase text-gray-400 mb-6 flex items-center gap-3">
-                 <FiCreditCard size={18} className="text-black" />
-                 Payment Method
-              </h2>
-              
-              <div className="grid grid-cols-2 gap-4 mb-10">
-                <button 
-                  onClick={() => setMethod("razorpay")} 
-                  className={`relative h-20 rounded-3xl border-2 transition-all flex items-center justify-center p-4 ${method === "razorpay" ? "border-black bg-gray-50" : "border-gray-100 bg-white"}`}
+              {/* Payment methods */}
+              <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-4">Payment Method</p>
+              <div className="grid grid-cols-2 gap-3 mb-8">
+                <button
+                  onClick={() => setMethod("razorpay")}
+                  aria-pressed={method === "razorpay"}
+                  className={`relative h-14 border flex items-center justify-center px-3 transition-colors ${
+                    method === "razorpay" ? "border-[var(--ink)] bg-[var(--ink-06)]" : "border-[var(--border-md)] hover:border-[var(--border-strong)]"
+                  }`}
                 >
-                  <img src={razorpayImg} alt="razorpay" className="h-full object-contain" />
-                  {method === "razorpay" && <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-black" />}
+                  <img src={razorpayImg} alt="Razorpay" className="h-5 object-contain" />
+                  {method === "razorpay" && <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-[var(--ink)]" />}
                 </button>
-
-                <button 
-                  onClick={() => setMethod("cod")} 
-                  className={`relative h-20 rounded-3xl border-2 transition-all flex flex-col items-center justify-center ${method === "cod" ? "border-black bg-gray-50" : "border-gray-100 bg-white"}`}
+                <button
+                  onClick={() => setMethod("cod")}
+                  aria-pressed={method === "cod"}
+                  className={`relative h-14 border flex flex-col items-center justify-center transition-colors ${
+                    method === "cod" ? "border-[var(--ink)] bg-[var(--ink-06)]" : "border-[var(--border-md)] hover:border-[var(--border-strong)]"
+                  }`}
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-900">Cash on Delivery</span>
-                  {method === "cod" && <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-black" />}
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--ink)]">Cash on Delivery</p>
+                  {method === "cod" && <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-[var(--ink)]" />}
                 </button>
               </div>
 
-              <button 
-                onClick={placeOrderHandler} 
-                disabled={loading || productsLoading || cartProducts.length === 0} 
-                className="w-full bg-black text-white py-6 rounded-full text-sm font-bold uppercase tracking-[0.2em] hover:bg-gray-800 transition shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
+              {/* Place order */}
+              <button
+                onClick={placeOrder}
+                disabled={loading || productsLoading || cartProducts.length === 0}
+                className="w-full bg-[var(--ink)] text-white py-4 text-[11px] font-semibold uppercase tracking-[0.2em] hover:bg-[var(--ink-80)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
               >
-                {loading ? "Processing..." : productsLoading ? "Loading Bag..." : "Place Order"}
-                <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+                {loading ? "Processing…" : productsLoading ? "Loading bag…" : "Place Order"}
+                <FiArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
               </button>
 
-              <div className="mt-8 flex items-center justify-center gap-3 text-gray-400">
-                <FiShield size={16} />
-                <span className="text-[10px] font-bold uppercase tracking-widest">SSL Encrypted Checkout</span>
+              <div className="mt-4 flex items-center justify-center gap-2 text-[var(--ink-30)]">
+                <FiShield size={12} />
+                <p className="text-[9px] font-medium uppercase tracking-widest">SSL Encrypted Checkout</p>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
-
-export default PlaceOrder;

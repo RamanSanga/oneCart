@@ -1,136 +1,146 @@
-import React from "react";
-import AboutImg from "../assets/About.png";
-import About from "./About";
+import React, { useState } from "react";
+import OurPolicy from "../component/OurPolicy";
 
+import heroWomen from "../assets/hero_women.jpg";
+
+const SUPPORT_ITEMS = [
+  { label: "Customer Care",          value: "contact@onecart.com",     note: "Monday–Saturday, 10 AM – 6 PM IST. Response within 24 hours." },
+  { label: "Business & Partnerships", value: "business@onecart.com",   note: "Collaborations, wholesale, media, and strategic partnerships." },
+  { label: "Phone",                  value: "+91 93065 32302",         note: "Monday–Friday · 10 AM – 6 PM IST" },
+];
 
 function Contact() {
+  const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [sent, setSent]   = useState(false);
+
+  const handleChange = e => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+
+  const handleSubmit = e => {
+    e.preventDefault();
+    /* In production, wire to backend. For now just show confirmation. */
+    setSent(true);
+  };
+
   return (
-    <section className="w-full bg-[#05060a] text-white">
+    <div className="bg-[var(--cream)] text-[var(--ink)]" style={{ paddingTop: "var(--nav-height)" }}>
 
-      {/* ================= EDITORIAL HERO ================= */}
-      <div className="min-h-[90vh] flex items-center px-6 md:px-20">
-        <div className="max-w-6xl">
-          <p className="text-xs tracking-[0.45em] uppercase text-white/40 mb-8">
-            OneCart Support
-          </p>
-
-          <h1 className="text-5xl md:text-7xl lg:text-[90px] font-light leading-[1.05] tracking-tight">
-            Let’s talk.
+      {/* ── HERO HEADER ── */}
+      <div className="px-6 md:px-10 lg:px-16 py-16 md:py-24 border-b border-[var(--border)] bg-[var(--cream)]">
+        <div className="max-w-[1440px] mx-auto">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.35em] text-[var(--ink-40)] mb-6">OneCart Support</p>
+          <h1 className="font-display font-light leading-[1.05] tracking-tight text-[var(--ink)]"
+              style={{ fontSize: "clamp(42px, 6vw, 88px)" }}>
+            Get in touch.
           </h1>
-
-          <p className="mt-10 max-w-2xl text-lg md:text-xl text-white/60 leading-relaxed">
-            From customer care to partnerships, our global support team is here
-            to deliver a seamless OneCart experience — with the same attention
-            to detail as our collections.
+          <p className="mt-8 text-[14px] font-light leading-relaxed text-[var(--ink-60)] max-w-[52ch]">
+            Our team is here with the same level of care that goes into every piece we make — thoughtful, responsive, and always on your side.
           </p>
         </div>
       </div>
 
-      {/* ================= SPLIT EDITORIAL SECTION ================= */}
-      <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-0">
-
-        {/* LEFT — IMAGE (FULL HEIGHT FEEL) */}
-        <div className="relative h-[400px] md:h-[600px] lg:h-[800px]">
-          <img
-            src={AboutImg}
-            alt="OneCart Office"
-            className="w-full h-full object-cover"
-          />
-
-          {/* SUBTLE OVERLAY TEXT */}
-          <div className="absolute bottom-10 left-6 md:left-16">
-            <p className="text-white text-xs tracking-[0.4em] uppercase">
-              OneCart Headquarters
-            </p>
+      {/* ── SPLIT: IMAGE + FORM ── */}
+      <div className="max-w-[1440px] mx-auto grid lg:grid-cols-2 gap-0 border-b border-[var(--border)]">
+        {/* Image */}
+        <div className="hidden lg:block h-[600px] overflow-hidden relative">
+          <img src={heroWomen} alt="OneCart showroom" className="w-full h-full object-cover" />
+          <div className="absolute bottom-8 left-8">
+            <p className="text-white text-[10px] font-semibold uppercase tracking-[0.25em]">OneCart / India</p>
           </div>
         </div>
 
-        {/* RIGHT — CONTACT BLOCKS */}
-          <div className="px-6 md:px-16 lg:px-24 py-20 lg:py-32 space-y-24 border-l border-white/10">
+        {/* Form */}
+        <div className="px-6 md:px-10 lg:px-16 py-16 lg:border-l border-[var(--border)]">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-10">Send a Message</p>
 
-          {/* CUSTOMER CARE */}
-          <div>
-            <p className="text-xs tracking-[0.35em] uppercase text-white/40 mb-4">
-              Customer Care
-            </p>
-            <p className="text-2xl md:text-3xl font-light text-white">
-             ramansanga63@gmail.com
-            </p>
-            <p className="mt-4 text-white/60 max-w-md leading-relaxed">
-              Our client care specialists are available Monday to Saturday,
-              10:00 AM – 6:00 PM IST. We aim to respond within 24 hours.
-            </p>
-          </div>
+          {sent ? (
+            <div className="py-20 text-center">
+              <p className="font-display font-light italic text-[var(--ink)] mb-3"
+                 style={{ fontSize: "clamp(24px, 3vw, 40px)" }}>
+                Thank you.
+              </p>
+              <p className="text-[13px] font-light text-[var(--ink-60)] max-w-[40ch] mx-auto">
+                We've received your message and will respond within 24 hours.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-10 max-w-md">
+              <div>
+                <label className="block text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--ink-40)] mb-2">Name</label>
+                <input
+                  name="name" required value={form.name} onChange={handleChange}
+                  placeholder="Your full name"
+                  className="input-underline"
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--ink-40)] mb-2">Email</label>
+                <input
+                  name="email" type="email" required value={form.email} onChange={handleChange}
+                  placeholder="your@email.com"
+                  className="input-underline"
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--ink-40)] mb-2">Message</label>
+                <textarea
+                  name="message" required rows={5} value={form.message} onChange={handleChange}
+                  placeholder="How can we help?"
+                  className="input-underline resize-none"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-4 bg-[var(--ink)] text-white text-[10px] font-semibold uppercase tracking-[0.2em] hover:bg-[var(--ink-80)] transition-colors"
+              >
+                Send Message →
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
 
-          {/* BUSINESS */}
-          <div>
-            <p className="text-xs tracking-[0.35em] uppercase text-white/40 mb-4">
-              Business & Partnerships
-            </p>
-            <p className="text-2xl md:text-3xl font-light text-white">
-              ramansanga63@gmail.com
-            </p>
-            <p className="mt-4 text-white/60 max-w-md leading-relaxed">
-              For collaborations, wholesale, media, and strategic partnerships.
-            </p>
-          </div>
-
-          {/* PHONE */}
-          <div>
-            <p className="text-xs tracking-[0.35em] uppercase text-white/40 mb-4">
-              Phone
-            </p>
-            <p className="text-2xl md:text-3xl font-light text-white">
-              +91 93065 32302
-            </p>
-            <p className="mt-4 text-white/60">
-              Monday to Friday · 10 AM – 6 PM IST
-            </p>
+      {/* ── SUPPORT CHANNELS ── */}
+      <div className="px-6 md:px-10 lg:px-16 py-16 md:py-20 bg-white border-b border-[var(--border)]">
+        <div className="max-w-[1440px] mx-auto">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-12">Direct Contact</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 divide-y md:divide-y-0 md:divide-x divide-[var(--border)]">
+            {SUPPORT_ITEMS.map((item, i) => (
+              <div key={i} className="pt-10 md:pt-0 md:pl-10 first:pl-0 first:pt-0">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--ink-40)] mb-4">{item.label}</p>
+                <p className="text-[15px] font-light text-[var(--ink)] mb-3 break-all">{item.value}</p>
+                <p className="text-[12px] font-light text-[var(--ink-60)] leading-relaxed">{item.note}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* ================= GLOBAL OFFICES ================= */}
-      <div className="max-w-7xl mx-auto px-6 md:px-20 py-32">
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-20">
-
-          {/* MANUFACTURING */}
+      {/* ── ADDRESS ── */}
+      <div className="px-6 md:px-10 lg:px-16 py-16 border-b border-[var(--border)]">
+        <div className="max-w-[1440px] mx-auto grid md:grid-cols-2 gap-12">
           <div>
-            <p className="text-xs tracking-[0.35em] uppercase text-white/40 mb-6">
-              Manufacturing
-            </p>
-            <p className="text-lg font-light leading-relaxed text-white/70">
-              OneCart Fashion Private Limited <br />
-              Industrial Area, Model Town <br />
-              Hisar, Haryana – 125001 <br />
+            <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-5">Manufacturing</p>
+            <p className="text-[13px] font-light text-[var(--ink-60)] leading-loose">
+              OneCart Fashion Private Limited<br />
+              Industrial Area, Model Town<br />
+              Hisar, Haryana — 125001<br />
               India
             </p>
           </div>
-
-          {/* CORPORATE */}
           <div>
-            <p className="text-xs tracking-[0.35em] uppercase text-white/40 mb-6">
-              Corporate Office
-            </p>
-            <p className="text-lg font-light leading-relaxed text-white/70">
-              OneCart Retail India Pvt. Ltd. <br />
-              Tower A, Sector 18 <br />
-              Hisar, Haryana – 122015 <br />
+            <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-5">Corporate Office</p>
+            <p className="text-[13px] font-light text-[var(--ink-60)] leading-loose">
+              OneCart Retail India Pvt. Ltd.<br />
+              Tower A, Sector 18<br />
+              Hisar, Haryana — 125001<br />
               India
             </p>
           </div>
         </div>
       </div>
 
-      {/* ================= CLOSING EDITORIAL ================= */}
-      <div className="border-t border-white/10 py-32 px-6 md:px-20">
-        <p className="max-w-5xl text-2xl md:text-3xl lg:text-4xl font-light leading-relaxed tracking-tight text-white/85">
-          Thoughtfully designed support — crafted with the same precision,
-          restraint, and care as every OneCart collection.
-        </p>
-      </div>
-    </section>
+      <OurPolicy />
+    </div>
   );
 }
 

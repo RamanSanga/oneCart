@@ -12,15 +12,18 @@ import productRoutes from "./routes/productRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
-import rajorRouter from "./routes/rajorRouter.js";
+import razorpayRouter from "./routes/razorpayRouter.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
 import reviewRoutes from "./routes/reviewRoute.js";
 import couponRoutes from "./routes/couponRoute.js";
 import stockAlertRoutes from "./routes/stockAlertRoute.js";
+import aiRoutes from "./routes/aiRoutes.js";
+import helmet from "helmet";
 
 const app = express();
 const port = process.env.PORT || 8000;
 
+app.use(helmet({ contentSecurityPolicy: false }));
 app.set("trust proxy", 1);
 
 /* ===== CORS (MUST BE FIRST MIDDLEWARE) ===== */
@@ -64,11 +67,13 @@ app.use("/api/product", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/order", orderRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/rajor", rajorRouter);
+app.use("/api/rajor", razorpayRouter);
+app.use("/api/razorpay", razorpayRouter);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/review", reviewRoutes);
 app.use("/api/coupon", couponRoutes);
 app.use("/api/stock-alert", stockAlertRoutes);
+app.use("/api/ai", aiRoutes);
 
 /* ===== START SERVER ===== */
 connectDb()

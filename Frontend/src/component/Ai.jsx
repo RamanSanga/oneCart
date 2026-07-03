@@ -1,358 +1,410 @@
-import React, { useEffect, useRef, useState } from "react";
-import { FiMic, FiX } from "react-icons/fi";
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import axios from "axios";
+import { FiX, FiArrowRight } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 
+import { authDataContext } from "../Context/AuthContext";
+import { shopDataContext } from "../Context/ShopContext";
+
+const INITIAL_PROMPTS = [
+  "Show me best sellers",
+  "Find black hoodies under ₹1500",
+  "What's new for women?",
+  "Recommend something for the gym",
+];
+
+const EMPTY_COLLECTIONS = { topProducts: [], recommendationProducts: [], relatedProducts: [] };
+
+/**
+ * OneCart Personal Shopping Concierge
+ * — Floating pill trigger at bottom-center
+ * — Right-side panel on dark background
+ * — Clean message display (no bubble borders)
+ * — Product cards: image + name/price, minimal
+ */
 function Ai() {
-  const navigate = useNavigate();
+  const { serverUrl }   = useContext(authDataContext);
+  const { currency }    = useContext(shopDataContext);
+  const navigate        = useNavigate();
+  const scrollRef       = useRef(null);
+  const inputRef        = useRef(null);
 
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
+  const [open,     setOpen]     = useState(false);
+  const [query,    setQuery]    = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [typing,   setTyping]   = useState(false);
+  const [error,    setError]    = useState("");
+  const [messages, setMessages] = useState([]);
 
-  const recognitionRef = useRef(null);
+  const canSubmit = query.trim().length > 0 && !loading;
 
-  const [open, setOpen] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [status, setStatus] = useState("Tap to speak");
+  /* ---- conversation history for context ---- */
+  const conversationHistory = useMemo(
+    () => messages
+      .filter(m => !m.isError)
+      .map(m => ({
+        role:    m.role,
+        content: m.role === "user" ? m.question : m.answer,
+      })),
+    [messages]
+  );
 
+  const historyWithQuery = useCallback(
+    text => [...conversationHistory, { role: "user", content: text }],
+    [conversationHistory]
+  );
+
+  /* ---- auto focus on open ---- */
   useEffect(() => {
-    if (!SpeechRecognition) {
-      console.error("SpeechRecognition not supported");
-      return;
+    if (open && inputRef.current) inputRef.current.focus();
+  }, [open]);
+
+  /* ---- auto scroll ---- */
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
+  }, [messages, typing]);
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "en-IN";
+  /* ---- lock body scroll when open on mobile ---- */
+  useEffect(() => {
+    if (open) document.body.style.overflow = "hidden";
+    else       document.body.style.overflow = "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
 
-    recognition.onstart = () => {
-      console.log("🎤 AI Listening...");
-      setStatus("Listening...");
-      setListening(true);
-    };
+  const normalizeProduct = p => ({
+    id:          p?.id || p?._id || "",
+    name:        p?.name || "Untitled",
+    description: p?.description || "",
+    category:    p?.category || "",
+    subCategory: p?.subCategory || "",
+    brand:       p?.brand || "",
+    price:       p?.price ?? null,
+    image:       p?.image || p?.image1 || p?.imageUrl || p?.images?.[0] || "",
+    score:       p?.score ?? null,
+  });
 
-    recognition.onerror = (e) => {
-      console.error("Speech error:", e);
-      setStatus("Microphone error");
-      setListening(false);
-    };
+  const sendQuery = useCallback(async value => {
+    const text = String(value || query).trim();
+    if (!text || loading) return;
 
-    recognition.onresult = (event) => {
-      const text = event.results[0][0].transcript.toLowerCase();
-      console.log("🧠 AI Heard:", text);
+    setError("");
+    setLoading(true);
+    setTyping(true);
+    setMessages(prev => [...prev, { id: `user-${Date.now()}`, role: "user", question: text }]);
+    setQuery("");
 
-      setTranscript(text);
-      handleVoiceCommand(text); // ✅ USE DIRECT TEXT
-    };
+    try {
+      const res = await axios.post(`${serverUrl}/api/ai/chat`, {
+        query:    text,
+        limit:    4,
+        messages: historyWithQuery(text),
+      });
 
-    recognition.onend = () => {
-      console.log("🛑 AI Stopped");
-      setListening(false);
-      setStatus("Tap to speak");
-    };
+      const payload     = res.data?.data || {};
+      const suggestions = res.data?.suggestions || payload.suggestions || [];
 
-    recognitionRef.current = recognition;
-  }, []);
-
-  const startListening = () => {
-    if (!recognitionRef.current) {
-      alert("Speech Recognition not supported in this browser.");
-      return;
+      setMessages(prev => [...prev, {
+        id:                  `ai-${Date.now()}`,
+        role:                "assistant",
+        answer:              res.data?.message || payload.answer || "",
+        intent:              payload.intent || "search",
+        filtersApplied:      payload.filtersApplied || {},
+        topProducts:         (Array.isArray(res.data?.products) ? res.data.products : Array.isArray(payload.topProducts) ? payload.topProducts : []).map(normalizeProduct),
+        recommendationProducts: (Array.isArray(payload.recommendationProducts) ? payload.recommendationProducts : []).map(normalizeProduct),
+        relatedProducts:     (Array.isArray(payload.relatedProducts) ? payload.relatedProducts : []).map(normalizeProduct),
+        confidence:          payload.confidence ?? null,
+        suggestions,
+      }]);
+    } catch (err) {
+      const msg = err?.response?.data?.error?.message || err?.message || "Request failed.";
+      setError(msg);
+      setMessages(prev => [...prev, {
+        id: `err-${Date.now()}`, role: "assistant", answer: "",
+        intent: "conversation", filtersApplied: {}, ...EMPTY_COLLECTIONS,
+        confidence: null, isError: true, errorMessage: msg,
+      }]);
+    } finally {
+      setLoading(false);
+      setTimeout(() => setTyping(false), 300);
     }
-    setTranscript("");
-    recognitionRef.current.start();
+  }, [historyWithQuery, loading, query, serverUrl]);
+
+  const handleSubmit = e => { e.preventDefault(); sendQuery(query); };
+
+  const handleRetry = useCallback(() => {
+    const userMessages = messages.filter(m => m.role === "user");
+    if (!userMessages.length) return;
+    const lastQuery = userMessages[userMessages.length - 1].question;
+    setMessages(prev => prev.filter(m => !m.isError));
+    setError("");
+    sendQuery(lastQuery);
+  }, [messages, sendQuery]);
+
+  const latestSuggestions = useMemo(() => {
+    const ais = messages.filter(m => m.role === "assistant" && !m.isError);
+    if (!ais.length) return [];
+    return ais[ais.length - 1].suggestions || [];
+  }, [messages]);
+
+  const openProduct = id => {
+    if (id) { navigate(`/productdetail/${id}`); setOpen(false); }
   };
 
-  /* ================= REAL AI COMMAND LOGIC ================= */
-const handleVoiceCommand = (text) => {
-  if (!text) return;
-
-  console.log("🚀 AI Command Processing:", text);
-
-  const t = text.toLowerCase().trim();
-
-  /* ================= UNIVERSAL HELP ================= */
-  if (
-    t.includes("what can you do") ||
-    t.includes("help me") ||
-    t.includes("how can you help") ||
-    t.includes("commands")
-  ) {
-    console.log("ℹ️ AI: Help mode");
-    alert(
-      "You can say: Open cart, Show wishlist, Track my orders, Show black t-shirts, Go to checkout, Logout, Contact support, and more."
-    );
-    return;
-  }
-
-  /* ================= NAVIGATION ================= */
-  if (t.includes("go back")) {
-    window.history.back();
-    return;
-  }
-
-  if (t.includes("go forward")) {
-    window.history.forward();
-    return;
-  }
-
-  /* ================= CART ================= */
-  if (
-    t.includes("cart") ||
-    t.includes("card") ||
-    t.includes("kart") ||
-    t.includes("bag") ||
-    t.includes("shopping bag")
-  ) {
-    navigate("/cart");
-    return;
-  }
-
-  if (
-    t.includes("checkout") ||
-    t.includes("place order") ||
-    t.includes("buy now") ||
-    t.includes("complete order") ||
-    t.includes("pay now")
-  ) {
-    navigate("/placeorder");
-    return;
-  }
-
-  if (
-    t.includes("clear cart") ||
-    t.includes("empty cart") ||
-    t.includes("remove all from cart")
-  ) {
-    alert("Say this feature is coming soon 😉");
-    return;
-  }
-
-  /* ================= WISHLIST ================= */
-  if (
-    t.includes("wishlist") ||
-    t.includes("wish list") ||
-    t.includes("favorites") ||
-    t.includes("favourites") ||
-    t.includes("saved items")
-  ) {
-    navigate("/wishlist");
-    return;
-  }
-
-  /* ================= ACCOUNT ================= */
-  if (
-    t.includes("account") ||
-    t.includes("profile") ||
-    t.includes("my account") ||
-    t.includes("my profile")
-  ) {
-    navigate("/account");
-    return;
-  }
-
-  /* ================= ORDERS ================= */
-  if (
-    t.includes("orders") ||
-    t.includes("my orders") ||
-    t.includes("order history") ||
-    t.includes("track order") ||
-    t.includes("track my order") ||
-    t.includes("order status")
-  ) {
-    navigate("/orders");
-    return;
-  }
-
-  /* ================= CONTACT / SUPPORT ================= */
-  if (
-    t.includes("contact") ||
-    t.includes("support") ||
-    t.includes("help") ||
-    t.includes("customer care") ||
-    t.includes("call support") ||
-    t.includes("complaint")
-  ) {
-    navigate("/contact");
-    return;
-  }
-
-  /* ================= ABOUT ================= */
-  if (
-    t.includes("about") ||
-    t.includes("about us") ||
-    t.includes("company") ||
-    t.includes("brand") ||
-    t.includes("who are you")
-  ) {
-    navigate("/about");
-    return;
-  }
-
-  /* ================= HOME ================= */
-  if (
-    t.includes("home") ||
-    t.includes("main") ||
-    t.includes("landing") ||
-    t.includes("start page") ||
-    t.includes("go back home")
-  ) {
-    navigate("/");
-    return;
-  }
-
-  /* ================= SMART PRODUCT SEARCH ================= */
-  const colors = [
-    "black",
-    "white",
-    "red",
-    "blue",
-    "green",
-    "yellow",
-    "pink",
-    "grey",
-    "gray",
-    "brown",
-    "beige",
-    "cream"
-  ];
-
-  const types = [
-    "t shirt",
-    "t-shirt",
-    "shirt",
-    "jeans",
-    "pants",
-    "trouser",
-    "jacket",
-    "hoodie",
-    "sweatshirt",
-    "kurta",
-    "dress",
-    "top",
-    "shorts"
-  ];
-
-  let detectedColor = colors.find((c) => t.includes(c));
-  let detectedType = types.find((p) => t.includes(p));
-
-  if (
-    t.includes("show") ||
-    t.includes("find") ||
-    t.includes("search") ||
-    detectedColor ||
-    detectedType
-  ) {
-    console.log("🛍️ AI: Smart Search", { detectedColor, detectedType });
-
-    navigate("/collection");
-
-    // OPTIONAL: store filters globally (if you add this feature)
-    // window.localStorage.setItem("aiColor", detectedColor || "");
-    // window.localStorage.setItem("aiType", detectedType || "");
-
-    return;
-  }
-
-  /* ================= ADD TO CART (INTENT ONLY) ================= */
-  if (
-    t.includes("add to cart") ||
-    t.includes("add this to cart") ||
-    t.includes("buy this") ||
-    t.includes("add this")
-  ) {
-    alert("Please select size and tap Add to Cart for this item.");
-    return;
-  }
-
-  /* ================= LOGOUT ================= */
-  if (
-    t.includes("logout") ||
-    t.includes("log out") ||
-    t.includes("sign out") ||
-    t.includes("exit account")
-  ) {
-    document.querySelector("[data-logout-btn]")?.click();
-    return;
-  }
-
-  /* ================= FALLBACK ================= */
-  console.log("❓ AI: No command matched:", t);
-
-  // Premium fallback UX
-  alert(
-    "Sorry, I didn’t catch that. Try saying: 'Open cart', 'Show black t-shirts', or 'Track my orders'."
-  );
-};
-
-
+  const activePrompts = latestSuggestions.length > 0 ? latestSuggestions : INITIAL_PROMPTS;
 
   return (
     <>
-      {/* ===== FLOATING AI BUTTON ===== */}
+      {/* ── FLOATING PILL TRIGGER ── */}
       <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full bg-black text-white shadow-2xl flex items-center justify-center hover:scale-105 transition"
+        onClick={() => setOpen(prev => !prev)}
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[9998] flex items-center gap-2.5 px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] transition-all duration-300 border ${
+          open
+            ? "bg-white text-[var(--ink)] border-[var(--border-md)] shadow-lg"
+            : "bg-[var(--ink)] text-white border-transparent shadow-[0_8px_32px_rgba(0,0,0,0.25)] hover:bg-[var(--ink-80)]"
+        }`}
+        aria-label="Toggle AI shopping assistant"
       >
-        <FiMic size={22} />
+        {open ? (
+          <><FiX size={13} /> Close</>
+        ) : (
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-white/60 animate-pulse" />
+            Personal Shopping
+          </>
+        )}
       </button>
 
-      {/* ===== AI OVERLAY ===== */}
-      {open && (
-        <div className="fixed inset-0 z-[9998] bg-black/40 flex items-end md:items-center justify-center">
-          <div className="bg-white w-full md:w-[420px] rounded-t-3xl md:rounded-3xl p-6 shadow-2xl">
-
-            {/* HEADER */}
-            <div className="flex justify-between items-center mb-6">
-              <p className="text-xs tracking-[0.4em] uppercase text-gray-400">
-                OneCart AI
-              </p>
-              <button onClick={() => setOpen(false)}>
-                <FiX size={20} />
+      {/* ── PANEL ── */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, x: 32 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 32 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="fixed top-0 right-0 bottom-0 z-[9997] flex flex-col bg-[#0A0A0A] text-white"
+            style={{ width: "min(420px, 100vw)" }}
+          >
+            {/* header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/8 shrink-0">
+              <div>
+                <p className="text-[8px] font-semibold uppercase tracking-[0.35em] text-white/30">OneCart</p>
+                <p className="text-[13px] font-medium mt-0.5 text-white">Personal Shopping</p>
+              </div>
+              <button
+                onClick={() => setOpen(false)}
+                className="text-white/30 hover:text-white transition-colors p-1"
+                aria-label="Close shopping assistant"
+              >
+                <FiX size={18} />
               </button>
             </div>
 
-            <h2 className="text-2xl font-light mb-2">
-              Speak naturally.
-            </h2>
-
-            <p className="text-sm text-gray-500 mb-6">
-              Say: "Show black t-shirts", "Open cart", "Go to wishlist"
-            </p>
-
-            {/* MIC */}
-            <button
-              onClick={startListening}
-              className={`w-full py-4 rounded-xl border border-black flex items-center justify-center gap-3 uppercase tracking-widest text-sm transition ${
-                listening
-                  ? "bg-black text-white"
-                  : "hover:bg-black hover:text-white"
-              }`}
+            {/* messages */}
+            <div
+              ref={scrollRef}
+              className="flex-1 overflow-y-auto no-scrollbar px-6 py-6 space-y-6"
             >
-              <FiMic />
-              {listening ? "Listening..." : "Tap to Speak"}
-            </button>
+              {/* empty state */}
+              {messages.length === 0 && !typing && (
+                <div className="py-10">
+                  <p className="text-[20px] font-display font-light italic text-white/60 leading-snug mb-8">
+                    What are you<br />looking for today?
+                  </p>
+                  <div className="space-y-2">
+                    {INITIAL_PROMPTS.map(p => (
+                      <button
+                        key={p}
+                        onClick={() => sendQuery(p)}
+                        className="block text-[12px] text-white/40 hover:text-white transition-colors text-left underline-offset-2 hover:underline"
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            {/* TRANSCRIPT */}
-            <div className="mt-6 bg-gray-50 border rounded-xl p-4 min-h-[80px]">
-              <p className="text-xs tracking-widest text-gray-400 mb-2">
-                Voice Input
-              </p>
+              {/* message list */}
+              {messages.map(msg => (
+                <MessageRow
+                  key={msg.id}
+                  message={msg}
+                  currency={currency || "₹"}
+                  onProductClick={openProduct}
+                  onRetry={handleRetry}
+                />
+              ))}
 
-              {transcript ? (
-                <p className="text-sm">{transcript}</p>
-              ) : (
-                <p className="text-sm text-gray-400 italic">
-                  Waiting for your voice...
-                </p>
+              {/* typing indicator */}
+              {typing && (
+                <div className="flex gap-1 items-center">
+                  {[0, 1, 2].map(i => (
+                    <motion.span
+                      key={i}
+                      animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
+                      transition={{ duration: 1.0, repeat: Infinity, delay: i * 0.15 }}
+                      className="h-1.5 w-1.5 rounded-full bg-white/40"
+                    />
+                  ))}
+                </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
+
+            {/* suggestions + input */}
+            <div className="shrink-0 border-t border-white/8 px-6 py-5">
+              {/* quick prompts */}
+              {activePrompts.slice(0, 3).length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {activePrompts.slice(0, 3).map(p => (
+                    <button
+                      key={p}
+                      onClick={() => sendQuery(p)}
+                      className="text-[10px] text-white/40 hover:text-white transition-colors underline-offset-2 hover:underline"
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* form */}
+              <form onSubmit={handleSubmit} className="flex items-center gap-3 border-b border-white/20 pb-3 focus-within:border-white/40 transition-colors">
+                <input
+                  ref={inputRef}
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder="Ask anything about our collection..."
+                  className="flex-1 bg-transparent outline-none text-[13px] font-light text-white placeholder:text-white/25"
+                  disabled={loading}
+                />
+                <button
+                  type="submit"
+                  disabled={!canSubmit}
+                  className="text-white/40 hover:text-white transition-colors disabled:opacity-20"
+                  aria-label="Send"
+                >
+                  <FiArrowRight size={17} />
+                </button>
+              </form>
+
+              {error && <p className="mt-3 text-[11px] text-red-400">{error}</p>}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
+}
+
+/* ── Message Row ── */
+function MessageRow({ message, currency, onProductClick, onRetry }) {
+  if (message.role === "user") {
+    return (
+      <div className="flex justify-end">
+        <p className="text-[12px] font-medium text-white/80 max-w-[80%] text-right">{message.question}</p>
+      </div>
+    );
+  }
+
+  if (message.isError) {
+    return (
+      <div className="space-y-2">
+        <p className="text-[12px] text-red-400/80 font-light">{message.errorMessage || "Something went wrong."}</p>
+        <button
+          onClick={onRetry}
+          className="text-[10px] uppercase tracking-[0.15em] text-white/30 hover:text-white transition-colors"
+        >
+          Retry →
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* AI text */}
+      {message.answer && (
+        <p className="text-[13px] font-light leading-relaxed text-white/75 whitespace-pre-line">
+          {message.answer}
+        </p>
+      )}
+
+      {/* Products */}
+      <ProductList label="Matches" products={message.topProducts}            currency={currency} onProductClick={onProductClick} />
+      <ProductList label="For You" products={message.recommendationProducts} currency={currency} onProductClick={onProductClick} />
+      <ProductList label="Related" products={message.relatedProducts}        currency={currency} onProductClick={onProductClick} />
+
+      {/* Filters applied */}
+      {message.filtersApplied && Object.keys(message.filtersApplied).length > 0 && (
+        <p className="text-[10px] text-white/25 font-light">{formatFilters(message.filtersApplied, currency)}</p>
+      )}
+    </div>
+  );
+}
+
+function ProductList({ label, products, currency, onProductClick }) {
+  if (!Array.isArray(products) || products.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/25">{label}</p>
+      <div className="space-y-2">
+        {products.map(p => (
+          <AiProductCard key={p.id || p.name} product={p} currency={currency} onClick={() => onProductClick(p.id)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AiProductCard({ product, currency, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-4 py-2.5 border-b border-white/6 hover:border-white/15 transition-colors text-left group"
+    >
+      {/* image */}
+      <div className="w-10 h-12 shrink-0 overflow-hidden bg-white/5">
+        {product.image
+          ? <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+          : <div className="w-full h-full flex items-center justify-center text-white/20 text-[8px] uppercase tracking-widest">No image</div>
+        }
+      </div>
+
+      {/* info */}
+      <div className="flex-1 min-w-0">
+        <p className="text-[12px] font-light text-white truncate">{product.name}</p>
+        {product.category && (
+          <p className="text-[9px] uppercase tracking-widest text-white/30 mt-0.5">{product.category}</p>
+        )}
+      </div>
+
+      {/* price + arrow */}
+      <div className="shrink-0 text-right">
+        <p className="text-[12px] font-medium text-white">
+          {product.price != null ? `${currency}${product.price}` : "—"}
+        </p>
+        <FiArrowRight size={12} className="text-white/20 group-hover:text-white/60 transition-colors ml-auto mt-1" />
+      </div>
+    </button>
+  );
+}
+
+function formatFilters(filters, currency) {
+  const parts = [];
+  if (filters.category)    parts.push(`Category: ${filters.category}`);
+  if (filters.subCategory) parts.push(`Type: ${filters.subCategory}`);
+  if (filters.brand)       parts.push(`Brand: ${filters.brand}`);
+  if (filters.minBudget != null || filters.maxBudget != null) {
+    const min = filters.minBudget != null ? `${currency}${filters.minBudget}` : "";
+    const max = filters.maxBudget != null ? `${currency}${filters.maxBudget}` : "";
+    parts.push(`Budget: ${[min, max].filter(Boolean).join("–")}`);
+  }
+  return parts.join(" · ");
 }
 
 export default Ai;

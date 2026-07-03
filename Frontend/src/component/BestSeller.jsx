@@ -1,71 +1,48 @@
 import React, { useContext, useState, useEffect } from "react";
-import Title from "./Title";
 import { shopDataContext } from "../Context/ShopContext";
 import Card from "./Card";
-import { motion } from "framer-motion";
 
+/**
+ * Best sellers — 4 featured products in a row.
+ */
 function BestSeller() {
   const { products } = useContext(shopDataContext);
-  const [bestSeller, setBestSeller] = useState([]);
+  const [best, setBest] = useState([]);
 
   useEffect(() => {
-    const filterProduct = products.filter((item) => item.bestSeller);
-    setBestSeller(filterProduct.slice(0, 4));
+    const filtered = products.filter(p => p.bestSeller);
+    setBest(filtered.slice(0, 4));
   }, [products]);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
-    }
-  };
+  if (!best.length) return null;
 
   return (
-    <section className="py-24">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.8 }}
-        className="flex flex-col items-center"
-      >
-        <Title text1="BEST" text2="SELLERS" />
-        <p className="text-white/80 drop-shadow-md text-sm text-center max-w-xl mx-auto mt-6 px-6">
-          Our most loved styles chosen by customers worldwide.
-        </p>
-      </motion.div>
+    <section className="py-20 md:py-28 px-6 md:px-10 lg:px-16 bg-white border-t border-[var(--border)]">
+      <div className="max-w-[1440px] mx-auto">
+        {/* header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
+          <div>
+            <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-2">Customer Favourites</p>
+            <h2 className="font-display font-light tracking-tight text-[var(--ink)] leading-tight"
+                style={{ fontSize: "clamp(28px, 3.5vw, 48px)" }}>
+              Best Sellers
+            </h2>
+          </div>
+        </div>
 
-      {/* PRODUCTS GRID */}
-      <motion.div 
-        variants={containerVariants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: "-100px" }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 mt-16 px-6"
-      >
-        {bestSeller.map((item) => (
-          <motion.div key={item._id} variants={itemVariants}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-5 gap-y-10">
+          {best.map(item => (
             <Card
+              key={item._id}
               id={item._id}
               name={item.name}
               image={item.image1}
               hoverImage={item.image2}
               price={item.price}
-              isBestSeller={item.bestSeller}
             />
-          </motion.div>
-        ))}
-      </motion.div>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }

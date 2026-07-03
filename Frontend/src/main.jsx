@@ -7,7 +7,7 @@ import AuthContext from './Context/AuthContext.jsx'
 import UserContext from './Context/UserContext.jsx'
 import ShopContext from './Context/ShopContext.jsx'
 import { ToastProvider } from './Context/ToastContext.jsx'
-import "./animations.css";
+
 
 
 createRoot(document.getElementById('root')).render(

@@ -60,3 +60,8 @@ U62099KA2024PTC188982
 
 Use this personalised link to accept payments instantly from your customers :- 
 razorpay.me/@raman7998
+
+AI setup:
+
+Set `GOOGLE_API_KEY` for Gemini, `HUGGING_FACE_API_KEY` for embeddings, and optionally `GEMINI_MODEL`, `GEMINI_TEMPERATURE`, `GEMINI_MAX_OUTPUT_TOKENS`, and `HUGGING_FACE_EMBEDDING_MODEL`.
+If you run a self-hosted Hugging Face inference endpoint, also set `HUGGING_FACE_ENDPOINT_URL`.

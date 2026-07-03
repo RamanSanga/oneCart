@@ -1,5 +1,9 @@
 import uploadOnCloudinary from "../config/cloudinary.js";
 import Product from "../model/productModel.js";
+import {
+  indexProduct,
+  removeProductFromIndex,
+} from "../ai/productIndexer.js";
 
 // ----------------------------
 // Helpers
@@ -51,6 +55,7 @@ export const addProduct = async (req, res) => {
       stock,
       category,
       subCategory,
+      brand,
       sizes,
       bestSeller,
     } = req.body;
@@ -110,6 +115,7 @@ export const addProduct = async (req, res) => {
       stock: finalStock,
       category,
       subCategory,
+      brand: brand?.trim() || "",
       sizes: parsedSizes,
       bestSeller: bestSeller === "true" || bestSeller === true,
       image1,
@@ -117,6 +123,12 @@ export const addProduct = async (req, res) => {
       image3,
       image4,
     });
+
+    try {
+      await indexProduct(product);
+    } catch (indexError) {
+      console.error("Vector index sync failed after add:", indexError);
+    }
 
     return res.status(201).json({
       success: true,
@@ -165,6 +177,12 @@ export const removeProduct = async (req, res) => {
         success: false,
         message: "Product not found",
       });
+    }
+
+    try {
+      await removeProductFromIndex(id);
+    } catch (indexError) {
+      console.error("Vector index sync failed after delete:", indexError);
     }
 
     return res.status(200).json({
@@ -230,6 +248,12 @@ export const updateProductStock = async (req, res) => {
 
       await product.save();
 
+      try {
+        await indexProduct(product);
+      } catch (indexError) {
+        console.error("Vector index sync failed after stock update:", indexError);
+      }
+
       return res.status(200).json({
         success: true,
         message: "Stock updated successfully",
@@ -262,6 +286,12 @@ export const updateProductStock = async (req, res) => {
       }
 
       await product.save();
+
+      try {
+        await indexProduct(product);
+      } catch (indexError) {
+        console.error("Vector index sync failed after stock update:", indexError);
+      }
 
       return res.status(200).json({
         success: true,
@@ -317,6 +347,12 @@ export const updateProductPrice = async (req, res) => {
         success: false,
         message: "Product not found",
       });
+    }
+
+    try {
+      await indexProduct(product);
+    } catch (indexError) {
+      console.error("Vector index sync failed after price update:", indexError);
     }
 
     return res.status(200).json({

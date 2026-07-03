@@ -1,166 +1,255 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useCallback } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { shopDataContext } from "../Context/ShopContext";
 import Card from "../component/Card";
-import { FiFilter, FiX, FiChevronDown, FiPlus, FiMinus } from "react-icons/fi";
 import Skeleton from "../component/Skeleton";
+import OurPolicy from "../component/OurPolicy";
+import { FiFilter, FiX, FiChevronDown, FiChevronUp } from "react-icons/fi";
 
-function Collection() {
+const CATEGORIES     = ["Men", "Women", "Kids"];
+const SUB_CATEGORIES = ["TopWear", "BottomWear", "WinterWear"];
+const SORT_OPTIONS   = [
+  { value: "featured", label: "Featured" },
+  { value: "low",      label: "Price: Low to High" },
+  { value: "high",     label: "Price: High to Low" },
+  { value: "newest",   label: "Newest" },
+];
+
+export default function Collections() {
   const { products, search, showSearch, productsLoading } = useContext(shopDataContext);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
-  const [selectedCategory, setSelectedCategory] = useState([]);
-  const [selectedSubCategory, setSelectedSubCategory] = useState([]);
-  const [priceRange, setPriceRange] = useState([0, 5000]); // Default range
-  const [sort, setSort] = useState("featured");
-  const [filtered, setFiltered] = useState([]);
-  const [showMobileFilter, setShowMobileFilter] = useState(false);
+  // ── Read filters from URL params on mount ──
+  const paramCategory    = searchParams.get("category");
+  const paramSubCategory = searchParams.get("subcategory");
 
-  const toggle = (value, setter) => {
-    setter((prev) =>
-      prev.includes(value)
-        ? prev.filter((i) => i !== value)
-        : [...prev, value]
-    );
+  const [selectedCategory,    setSelectedCategory]    = useState(() => paramCategory    ? [paramCategory]    : []);
+  const [selectedSubCategory, setSelectedSubCategory] = useState(() => paramSubCategory ? [paramSubCategory] : []);
+  const [priceMax,            setPriceMax]            = useState(40000);
+  const [sort,                setSort]                = useState("featured");
+  const [filtered,            setFiltered]            = useState([]);
+  const [showMobileFilter,    setShowMobileFilter]    = useState(false);
+
+  // ── Sync URL → state when URL changes externally (e.g. from nav links) ──
+  useEffect(() => {
+    const c = searchParams.get("category");
+    const s = searchParams.get("subcategory");
+    setSelectedCategory(c ? [c] : []);
+    setSelectedSubCategory(s ? [s] : []);
+  }, [searchParams]);
+
+  const toggleFilter = useCallback((value, setter, current) => {
+    setter(prev => prev.includes(value) ? prev.filter(i => i !== value) : [...prev, value]);
+  }, []);
+
+  const resetFilters = () => {
+    setSelectedCategory([]);
+    setSelectedSubCategory([]);
+    setPriceMax(40000);
+    setSort("featured");
+    setSearchParams({});
   };
 
+  const hasFilters = selectedCategory.length > 0 || selectedSubCategory.length > 0 || priceMax < 40000;
+
+  // ── Filter + sort ──
   useEffect(() => {
     let temp = [...products];
 
-    // SEARCH FIRST
-    if (showSearch && search.trim() !== "") {
-      temp = temp.filter((item) =>
-        item.name.toLowerCase().includes(search.toLowerCase())
-      );
+    // Search override
+    if (showSearch && search.trim()) {
+      temp = temp.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
     }
 
-    // CATEGORY
-    if (selectedCategory.length) {
-      temp = temp.filter((p) =>
-        selectedCategory.includes(p.category)
-      );
-    }
+    // Category (AND logic between cat and subcat)
+    if (selectedCategory.length)    temp = temp.filter(p => selectedCategory.includes(p.category));
+    if (selectedSubCategory.length) temp = temp.filter(p => selectedSubCategory.includes(p.subCategory));
 
-    // SUB CATEGORY
-    if (selectedSubCategory.length) {
-      temp = temp.filter((p) =>
-        selectedSubCategory.includes(p.subCategory)
-      );
-    }
+    // Price ceiling
+    temp = temp.filter(p => p.price <= priceMax);
 
-    // PRICE RANGE
-    temp = temp.filter((p) => p.price >= priceRange[0] && p.price <= priceRange[1]);
-
-    // SORT
-    if (sort === "low") temp.sort((a, b) => a.price - b.price);
-    if (sort === "high") temp.sort((a, b) => b.price - a.price);
+    // Sort
+    if (sort === "low")    temp = [...temp].sort((a, b) => a.price - b.price);
+    if (sort === "high")   temp = [...temp].sort((a, b) => b.price - a.price);
+    if (sort === "newest") temp = [...temp].reverse();
 
     setFiltered(temp);
-  }, [selectedCategory, selectedSubCategory, priceRange, sort, products, search, showSearch]);
+  }, [selectedCategory, selectedSubCategory, priceMax, sort, products, search, showSearch]);
+
+  // ── Page title ──
+  const getPageTitle = () => {
+    if (showSearch && search.trim()) return `Search: "${search}"`;
+    if (selectedCategory.length === 1 && selectedSubCategory.length === 0) return selectedCategory[0];
+    if (selectedSubCategory.length === 1 && selectedCategory.length === 0) return selectedSubCategory[0];
+    if (selectedCategory.length === 1 && selectedSubCategory.length === 1) return `${selectedCategory[0]} · ${selectedSubCategory[0]}`;
+    return "All Collections";
+  };
 
   return (
-    <div className="pt-[140px] pb-32 bg-[#05060a] min-h-screen text-white">
-      <div className="max-w-[1440px] mx-auto px-6 md:px-10">
-        
-        {/* HEADER SECTION */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
-          <div className="flex items-center gap-4">
-            <div className="h-px w-12 bg-white/10" />
-            <h1 className="text-4xl md:text-6xl font-light tracking-tight text-white">Curated <span className="italic text-white/75">Collections</span></h1>
+    <div className="min-h-screen bg-[var(--cream)]" style={{ paddingTop: "var(--nav-height)" }}>
+
+      {/* ── PAGE HEADER ── */}
+      <div className="border-b border-[var(--border)] px-6 md:px-10 lg:px-16 py-8 md:py-10">
+        <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-3">
+          <div>
+            <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-1.5">Shop</p>
+            <h1 className="font-display font-light tracking-tight text-[var(--ink)] leading-none"
+                style={{ fontSize: "clamp(24px, 3vw, 38px)" }}>
+              {getPageTitle()}
+            </h1>
           </div>
-          
-          <div className="flex items-center gap-4 self-end">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Sort By</p>
-            <div className="relative group">
-               <select
-                onChange={(e) => setSort(e.target.value)}
-                className="appearance-none bg-white/5 text-white border border-white/10 rounded-full px-8 py-3 text-[10px] font-bold uppercase tracking-widest outline-none focus:ring-2 focus:ring-white/10 transition-all cursor-pointer min-w-[180px]"
+
+          <div className="flex items-center gap-6">
+            {hasFilters && (
+              <button
+                onClick={resetFilters}
+                className="text-[10px] font-medium uppercase tracking-widest text-[var(--ink-40)] hover:text-[var(--ink)] transition-colors border-b border-transparent hover:border-[var(--ink-40)]"
               >
-                <option value="featured">Featured</option>
-                <option value="low">Price: Low to High</option>
-                <option value="high">Price: High to Low</option>
-              </select>
-              <FiChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/40" />
-            </div>
+                Clear filters
+              </button>
+            )}
+            <p className="text-[12px] text-[var(--ink-40)]">{filtered.length} products</p>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-8 lg:gap-20">
-          {/* DESKTOP FILTERS */}
-          <aside className="hidden md:block w-64 shrink-0">
-            <div className="sticky top-24">
-              <div className="mb-12">
-                <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-white mb-8 border-b border-white/10 pb-4">Refine Results</h3>
-                
-                {/* PRICE RANGE FILTER */}
-                <div className="mb-10">
-                   <p className="text-[10px] font-bold uppercase tracking-widest text-white mb-6">Price Range</p>
-                   <input 
-                    type="range" 
-                    min="0" 
-                    max="40000" 
-                    step="100"
-                    value={priceRange[1]}
-                    onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
-                    className="w-full accent-yellow-300 mb-4 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
-                    aria-label="Maximum price"
-                   />
-                   <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                      <span>₹0</span>
-                      <span className="text-black bg-yellow-300 px-3 py-1 rounded-full border border-white/10 shadow-sm">Up to ₹{priceRange[1]}</span>
-                   </div>
+        {/* ── CATEGORY QUICK NAV ── */}
+        <div className="max-w-[1440px] mx-auto mt-5 flex flex-wrap gap-2">
+          <button
+            onClick={resetFilters}
+            className={`text-[10px] font-medium uppercase tracking-[0.15em] px-3.5 py-1.5 border transition-colors ${
+              !hasFilters ? "bg-[var(--ink)] text-white border-[var(--ink)]" : "border-[var(--border-md)] text-[var(--ink-60)] hover:border-[var(--ink)] hover:text-[var(--ink)]"
+            }`}
+          >
+            All
+          </button>
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => {
+                setSelectedCategory([cat]);
+                setSelectedSubCategory([]);
+                setSearchParams({ category: cat });
+              }}
+              className={`text-[10px] font-medium uppercase tracking-[0.15em] px-3.5 py-1.5 border transition-colors ${
+                selectedCategory.length === 1 && selectedCategory[0] === cat && selectedSubCategory.length === 0
+                  ? "bg-[var(--ink)] text-white border-[var(--ink)]"
+                  : "border-[var(--border-md)] text-[var(--ink-60)] hover:border-[var(--ink)] hover:text-[var(--ink)]"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+          {SUB_CATEGORIES.map(sub => (
+            <button
+              key={sub}
+              onClick={() => {
+                setSelectedSubCategory([sub]);
+                setSelectedCategory([]);
+                setSearchParams({ subcategory: sub });
+              }}
+              className={`text-[10px] font-medium uppercase tracking-[0.15em] px-3.5 py-1.5 border transition-colors ${
+                selectedSubCategory.length === 1 && selectedSubCategory[0] === sub && selectedCategory.length === 0
+                  ? "bg-[var(--ink)] text-white border-[var(--ink)]"
+                  : "border-[var(--border-md)] text-[var(--ink-60)] hover:border-[var(--ink)] hover:text-[var(--ink)]"
+              }`}
+            >
+              {sub}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="max-w-[1440px] mx-auto px-6 md:px-10 lg:px-16 py-10">
+        <div className="flex gap-12 lg:gap-16">
+
+          {/* ── DESKTOP SIDEBAR ── */}
+          <aside className="hidden md:block w-44 shrink-0">
+            <div className="sticky space-y-10" style={{ top: "calc(var(--nav-height) + 24px)" }}>
+
+              {/* Sort */}
+              <SidebarSection title="Sort by">
+                {SORT_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setSort(opt.value)}
+                    className={`block text-left text-[12px] w-full transition-colors ${
+                      sort === opt.value ? "text-[var(--ink)] font-medium" : "text-[var(--ink-40)] hover:text-[var(--ink)]"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </SidebarSection>
+
+              <div className="h-px bg-[var(--border)]" />
+
+              {/* Price */}
+              <SidebarSection title="Max Price">
+                <input
+                  type="range" min={0} max={40000} step={500}
+                  value={priceMax}
+                  onChange={e => setPriceMax(Number(e.target.value))}
+                  className="w-full cursor-pointer"
+                  aria-label="Maximum price"
+                />
+                <div className="flex justify-between text-[10px] text-[var(--ink-40)] mt-1">
+                  <span>₹0</span>
+                  <span className="text-[var(--ink)] font-medium">₹{priceMax.toLocaleString("en-IN")}</span>
                 </div>
+              </SidebarSection>
 
-                <FilterBlock
-                  title="Department"
-                  items={["Men", "Women", "Kids"]}
-                  selected={selectedCategory}
-                  toggle={(v) => toggle(v, setSelectedCategory)}
-                />
+              <div className="h-px bg-[var(--border)]" />
 
-                <FilterBlock
-                  title="Product Type"
-                  items={["TopWear", "BottomWear", "WinterWear"]}
-                  selected={selectedSubCategory}
-                  toggle={(v) => toggle(v, setSelectedSubCategory)}
-                />
-              </div>
+              {/* Departments */}
+              <FilterGroup
+                title="Department"
+                items={CATEGORIES}
+                selected={selectedCategory}
+                onToggle={v => toggleFilter(v, setSelectedCategory, selectedCategory)}
+              />
 
-              <div className="p-6 bg-white/5 rounded-3xl border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2">Selected Items</p>
-                <p className="text-2xl font-light text-white">{filtered.length}</p>
-              </div>
+              <div className="h-px bg-[var(--border)]" />
+
+              <FilterGroup
+                title="Type"
+                items={SUB_CATEGORIES}
+                selected={selectedSubCategory}
+                onToggle={v => toggleFilter(v, setSelectedSubCategory, selectedSubCategory)}
+              />
             </div>
           </aside>
 
-          {/* PRODUCTS GRID */}
-          <section className="flex-1">
-             {/* MOBILE FILTER TRIGGER */}
-             <button
-              onClick={() => setShowMobileFilter(true)}
-              className="md:hidden w-full flex items-center justify-between px-8 py-4 bg-white/5 border border-white/10 rounded-2xl mb-8 shadow-sm text-white"
-            >
-              <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
-                <FiFilter /> Filters
-              </span>
-              <span className="text-[10px] font-bold text-white/40">{filtered.length} Items</span>
-            </button>
+          {/* ── PRODUCT GRID ── */}
+          <main className="flex-1 min-w-0">
+            {/* Mobile filter row */}
+            <div className="md:hidden flex items-center justify-between mb-7">
+              <button
+                onClick={() => setShowMobileFilter(true)}
+                className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--ink)] border-b border-[var(--ink)] pb-0.5"
+              >
+                <FiFilter size={12} />
+                Filter{hasFilters ? ` (${selectedCategory.length + selectedSubCategory.length + (priceMax < 40000 ? 1 : 0)})` : ""}
+              </button>
+              <select
+                value={sort}
+                onChange={e => setSort(e.target.value)}
+                className="text-[11px] bg-transparent outline-none text-[var(--ink)] font-medium cursor-pointer"
+                aria-label="Sort"
+              >
+                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
 
             {productsLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-12">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                  <Skeleton key={n} type="card" />
-                ))}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-12">
+                {Array.from({ length: 9 }).map((_, i) => <Skeleton key={i} type="card" />)}
               </div>
             ) : filtered.length === 0 ? (
-                <div className="bg-white/5 rounded-[40px] py-32 text-center border border-white/10 flex flex-col items-center">
-                  <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 text-white/30">
-                    <FiX size={32} />
-                 </div>
-                  <h2 className="text-2xl font-light text-white mb-2">No products found</h2>
-                  <p className="text-white/50 text-sm">Try adjusting your filters or search terms.</p>
-              </div>
+              <EmptyState hasFilters={hasFilters} onReset={resetFilters} />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-12">
-                {filtered.map((item) => (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-12">
+                {filtered.map(item => (
                   <Card
                     key={item._id}
                     id={item._id}
@@ -168,100 +257,115 @@ function Collection() {
                     image={item.image1}
                     hoverImage={item.image2}
                     price={item.price}
-                    isBestSeller={item.bestSeller}
                   />
                 ))}
               </div>
             )}
-          </section>
+          </main>
         </div>
       </div>
 
-      {/* MOBILE FILTER SIDEBAR */}
+      {/* ── MOBILE FILTER DRAWER ── */}
       {showMobileFilter && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowMobileFilter(false)} />
-          <div className="absolute right-0 top-0 h-full w-[85%] max-w-sm bg-[#05060a] p-8 overflow-y-auto animate-in slide-in-from-right duration-300 text-white border-l border-white/10">
-            <div className="flex justify-between items-center mb-10">
-              <h3 className="text-xl font-light">Filter Results</h3>
-              <button onClick={() => setShowMobileFilter(false)} className="p-2 -mr-2"><FiX size={24} /></button>
+        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Filters">
+          <div className="absolute inset-0 bg-[var(--ink)]/40" onClick={() => setShowMobileFilter(false)} />
+          <div className="absolute right-0 top-0 h-full w-[85%] max-w-sm bg-[var(--cream)] border-l border-[var(--border)] flex flex-col">
+            {/* header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--ink)]">Filter & Sort</p>
+              <button onClick={() => setShowMobileFilter(false)} className="text-[var(--ink-60)] hover:text-[var(--ink)] transition-colors">
+                <FiX size={18} />
+              </button>
             </div>
 
-            {/* PRICE RANGE FILTER */}
-            <div className="mb-12">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white mb-6">Price Range</p>
-                <input 
-                type="range" 
-                min="0" 
-                max="40000" 
-                step="100"
-                value={priceRange[1]}
-                onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
-                className="w-full accent-yellow-300 mb-4 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
-                aria-label="Maximum price mobile"
-                />
-                <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    <span>₹0</span>
-                    <span className="text-black bg-yellow-300 px-3 py-1 rounded-full border border-white/10 shadow-sm">Up to ₹{priceRange[1]}</span>
-                </div>
+            {/* body */}
+            <div className="flex-1 overflow-y-auto px-6 py-8 space-y-10">
+              <SidebarSection title="Sort by">
+                {SORT_OPTIONS.map(opt => (
+                  <button key={opt.value} onClick={() => setSort(opt.value)}
+                    className={`block text-left text-[13px] w-full py-1 ${sort === opt.value ? "text-[var(--ink)] font-medium" : "text-[var(--ink-40)]"}`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </SidebarSection>
+
+              <SidebarSection title="Max Price">
+                <input type="range" min={0} max={40000} step={500} value={priceMax}
+                  onChange={e => setPriceMax(Number(e.target.value))} className="w-full cursor-pointer" />
+                <p className="text-[12px] text-[var(--ink-60)] mt-1">Up to ₹{priceMax.toLocaleString("en-IN")}</p>
+              </SidebarSection>
+
+              <FilterGroup title="Department" items={CATEGORIES} selected={selectedCategory}
+                onToggle={v => toggleFilter(v, setSelectedCategory, selectedCategory)} />
+
+              <FilterGroup title="Type" items={SUB_CATEGORIES} selected={selectedSubCategory}
+                onToggle={v => toggleFilter(v, setSelectedSubCategory, selectedSubCategory)} />
             </div>
 
-            <FilterBlock
-              title="Department"
-              items={["Men", "Women", "Kids"]}
-              selected={selectedCategory}
-              toggle={(v) => toggle(v, setSelectedCategory)}
-            />
-
-            <FilterBlock
-              title="Product Type"
-              items={["TopWear", "BottomWear", "WinterWear"]}
-              selected={selectedSubCategory}
-              toggle={(v) => toggle(v, setSelectedSubCategory)}
-            />
-
-            <button 
-              onClick={() => setShowMobileFilter(false)}
-              className="w-full bg-white text-black py-5 rounded-full text-[10px] font-bold uppercase tracking-widest mt-10"
-            >
-              Show {filtered.length} Products
-            </button>
+            {/* footer */}
+            <div className="px-6 py-5 border-t border-[var(--border)] flex gap-3">
+              <button onClick={() => { resetFilters(); setShowMobileFilter(false); }}
+                className="flex-1 py-3 border border-[var(--border-md)] text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--ink-60)] hover:text-[var(--ink)] transition-colors">
+                Reset
+              </button>
+              <button onClick={() => setShowMobileFilter(false)}
+                className="flex-1 py-3 bg-[var(--ink)] text-white text-[10px] font-semibold uppercase tracking-[0.15em] hover:bg-[var(--ink-80)] transition-colors">
+                View {filtered.length} Results
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      <OurPolicy />
     </div>
   );
 }
 
-function FilterBlock({ title, items, selected, toggle }) {
-  const [isOpen, setIsOpen] = useState(true);
+/* ── Helper components ── */
 
+function SidebarSection({ title, children }) {
   return (
-    <div className="mb-10 group">
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between mb-6 transition-colors"
-        aria-expanded={isOpen}
-      >
-        <p className="text-[10px] font-bold uppercase tracking-widest text-white">{title}</p>
-        {isOpen ? <FiMinus size={14} className="text-white/60" /> : <FiPlus size={14} className="text-white/60" />}
-      </button>
+    <div className="space-y-3">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)]">{title}</p>
+      <div className="space-y-2.5">{children}</div>
+    </div>
+  );
+}
 
-      {isOpen && (
-        <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-2">
-          {items.map((item) => {
-            const isActive = selected.includes(item);
+function FilterGroup({ title, items, selected, onToggle }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between mb-4"
+        aria-expanded={open}
+      >
+        <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)]">{title}</p>
+        {open ? <FiChevronUp size={11} className="text-[var(--ink-40)]" /> : <FiChevronDown size={11} className="text-[var(--ink-40)]" />}
+      </button>
+      {open && (
+        <div className="space-y-3">
+          {items.map(item => {
+            const active = selected.includes(item);
             return (
               <button
                 key={item}
-                onClick={() => toggle(item)}
-                className="flex items-center gap-4 text-sm group/item"
-                aria-pressed={isActive}
+                onClick={() => onToggle(item)}
+                className="flex items-center gap-3 text-left w-full group/item"
+                aria-pressed={active}
               >
-                <div className={`w-5 h-5 rounded-lg border-2 transition-all flex items-center justify-center ${isActive ? "bg-white text-black border-white shadow-lg" : "border-white/10 bg-transparent group-hover/item:border-white/20"}`}>
-                  {isActive && <div className="w-1.5 h-1.5 bg-black rounded-full" />}
+                <div className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 transition-colors ${
+                  active ? "bg-[var(--ink)] border-[var(--ink)]" : "border-[var(--border-md)] group-hover/item:border-[var(--ink-40)]"
+                }`}>
+                  {active && <div className="w-1.5 h-1.5 bg-white" />}
                 </div>
-                <span className={`transition-colors ${isActive ? "text-white font-medium" : "text-white/60 group-hover/item:text-white"}`}>{item}</span>
+                <span className={`text-[12px] transition-colors ${
+                  active ? "text-[var(--ink)] font-medium" : "text-[var(--ink-60)] group-hover/item:text-[var(--ink)]"
+                }`}>
+                  {item}
+                </span>
               </button>
             );
           })}
@@ -271,4 +375,25 @@ function FilterBlock({ title, items, selected, toggle }) {
   );
 }
 
-export default Collection;
+function EmptyState({ hasFilters, onReset }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-28 text-center">
+      <p className="font-display font-light text-[var(--ink)] mb-3" style={{ fontSize: "clamp(24px, 3vw, 36px)" }}>
+        No results.
+      </p>
+      <p className="text-[13px] font-light text-[var(--ink-40)] mb-8 max-w-[38ch] leading-relaxed">
+        {hasFilters
+          ? "No products match your current filters. Try adjusting or clearing them."
+          : "No products available right now. Check back soon."}
+      </p>
+      {hasFilters && (
+        <button
+          onClick={onReset}
+          className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--ink)] border-b border-[var(--ink)] pb-0.5 hover:text-[var(--ink-60)] transition-colors"
+        >
+          Clear All Filters
+        </button>
+      )}
+    </div>
+  );
+}

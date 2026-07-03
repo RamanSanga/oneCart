@@ -1,168 +1,138 @@
 import React, { useContext } from "react";
-import { Heart, ShoppingBag, X, ArrowRight } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { shopDataContext } from "../Context/ShopContext";
+import { FiHeart, FiShoppingBag, FiX, FiArrowRight } from "react-icons/fi";
+import OurPolicy from "../component/OurPolicy";
 
-function Wishlist() {
+export default function Wishlist() {
   const navigate = useNavigate();
-  const { 
-    currency, 
-    addToCart, 
-    wishlistItems, 
-    wishlistLoading, 
-    toggleWishlist 
-  } = useContext(shopDataContext);
+  const { currency, addToCart, wishlistItems, wishlistLoading, toggleWishlist } = useContext(shopDataContext);
 
-  /* ================= STOCK CALCULATION ================= */
-  const getTotalStock = (product) => {
-    if (typeof product.stock === "number") return product.stock;
-    if (product.stock && typeof product.stock === "object") {
-      const plain = product.stock.toObject ? product.stock.toObject() : { ...product.stock };
-      return Object.values(plain).reduce((sum, val) => sum + (Number(val) || 0), 0);
+  const getTotalStock = p => {
+    if (typeof p.stock === "number") return p.stock;
+    if (p.stock && typeof p.stock === "object") {
+      const obj = p.stock.toObject ? p.stock.toObject() : { ...p.stock };
+      return Object.values(obj).reduce((s, v) => s + (Number(v) || 0), 0);
     }
     return 0;
   };
 
   if (wishlistLoading) {
     return (
-      <section className="pt-[120px] pb-32 bg-[#faf9f5] min-h-screen flex flex-col justify-center items-center gap-4">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-black/10 border-t-black" />
-        <p className="text-gray-400 text-sm tracking-[0.2em] uppercase font-medium">Curating your favorites</p>
-      </section>
+      <div className="min-h-screen bg-[var(--cream)] flex items-center justify-center" style={{ paddingTop: "var(--nav-height)" }}>
+        <p className="text-[13px] font-semibold tracking-[0.2em] uppercase text-[var(--ink)] opacity-60 animate-pulse">OneCart</p>
+      </div>
     );
   }
 
   return (
-    <section className="pt-[120px] pb-32 bg-[#faf9f5] min-h-screen">
-      <div className="max-w-7xl mx-auto px-6 md:px-10">
+    <div className="min-h-screen bg-[var(--cream)]" style={{ paddingTop: "var(--nav-height)" }}>
+      <div className="max-w-[1440px] mx-auto px-6 md:px-10 lg:px-16 py-10 md:py-14">
 
-        {/* ================= HEADER ================= */}
-        <div className="mb-16">
-          <div className="flex items-center gap-4 mb-4">
-             <div className="h-[1px] w-12 bg-black" />
-             <p className="text-xs font-bold uppercase tracking-[0.3em] text-gray-400">Personal Collection</p>
+        {/* Header */}
+        <div className="border-b border-[var(--border)] pb-8 mb-10 flex items-end justify-between">
+          <div>
+            <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-2">Saved items</p>
+            <h1 className="font-display font-light text-[var(--ink)]" style={{ fontSize: "clamp(26px, 3.5vw, 44px)" }}>
+              Wishlist
+            </h1>
           </div>
-          <h1 className="text-4xl md:text-5xl font-light tracking-tight text-gray-950">
-            Your <span className="italic">Wishlist</span>
-          </h1>
+          <p className="text-[12px] text-[var(--ink-40)]">{wishlistItems.length} item{wishlistItems.length !== 1 ? "s" : ""}</p>
         </div>
 
-        {/* ================= EMPTY STATE ================= */}
+        {/* Empty */}
         {wishlistItems.length === 0 && (
-          <div className="flex flex-col items-center justify-center text-center py-20 bg-white rounded-[40px] border border-gray-100 shadow-[0_20px_80px_rgba(0,0,0,0.03)]">
-            <div className="w-24 h-24 rounded-full bg-[#faf9f5] flex items-center justify-center mb-8 shadow-inner">
-              <Heart size={32} className="text-gray-300" />
+          <div className="flex flex-col items-center justify-center py-32 text-center">
+            <div className="w-12 h-12 border border-[var(--border-md)] flex items-center justify-center mb-8 text-[var(--ink-20)]">
+              <FiHeart size={20} />
             </div>
-
-            <h2 className="text-2xl font-light text-gray-950 mb-4 tracking-tight">
-              Nothing saved yet
+            <h2 className="font-display font-light text-[var(--ink)] mb-3" style={{ fontSize: "clamp(22px, 3vw, 34px)" }}>
+              Nothing saved yet.
             </h2>
-
-            <p className="text-gray-500 mb-10 max-w-sm px-6 leading-relaxed">
-              Curate your perfect wardrobe. Browse our collection and save the items you love most.
+            <p className="text-[13px] font-light text-[var(--ink-40)] mb-10 max-w-[36ch] leading-relaxed">
+              Browse our collections and save the pieces you love.
             </p>
-
             <Link
               to="/collection"
-              className="inline-flex items-center gap-3 bg-black text-white px-10 py-5 rounded-full text-sm font-medium uppercase tracking-[0.2em] transition hover:bg-gray-800 shadow-xl"
+              className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--ink)] border-b border-[var(--ink)] pb-0.5 hover:text-[var(--ink-60)] transition-colors"
             >
-              Explore Collection
-              <ArrowRight size={18} />
+              Explore Collections <FiArrowRight size={11} />
             </Link>
           </div>
         )}
 
-        {/* ================= GRID ================= */}
+        {/* Grid */}
         {wishlistItems.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {wishlistItems.map((item) => {
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 gap-y-10">
+            {wishlistItems.map(item => {
               const totalStock = getTotalStock(item);
-              const lowStock = totalStock > 0 && totalStock <= 3;
               const outOfStock = totalStock <= 0;
+              const lowStock   = !outOfStock && totalStock <= 3;
 
               return (
-                <div key={item._id} className="group relative bg-white rounded-[32px] p-3 transition-all duration-500 hover:shadow-[0_20px_60px_rgba(0,0,0,0.05)] border border-transparent hover:border-gray-50">
-
-                  {/* REMOVE BUTTON */}
+                <div key={item._id} className="group relative">
+                  {/* Remove */}
                   <button
                     onClick={() => toggleWishlist(item)}
-                    className="absolute top-6 right-6 z-30 bg-white/90 backdrop-blur-md rounded-full p-2.5 shadow-sm text-gray-400 hover:text-red-500 transition-all hover:scale-110 active:scale-95"
-                    title="Remove from wishlist"
+                    aria-label="Remove from wishlist"
+                    className="absolute top-3 right-3 z-20 w-7 h-7 bg-white/90 border border-[var(--border)] flex items-center justify-center text-[var(--ink-40)] hover:text-[var(--ink)] transition-colors"
                   >
-                    <X size={16} />
+                    <FiX size={13} />
                   </button>
 
-                  {/* IMAGE */}
+                  {/* Image */}
                   <div
                     onClick={() => navigate(`/productdetail/${item._id}`)}
-                    className="cursor-pointer relative aspect-[3/4] overflow-hidden bg-[#f8f8f8] rounded-[24px]"
+                    className="relative aspect-[3/4] overflow-hidden bg-[#EEECEA] cursor-pointer"
                   >
                     <img
                       src={item.image1}
                       alt={item.name}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      loading="lazy"
+                      className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03] ${outOfStock ? "opacity-50" : ""}`}
                     />
-                    
-                    {lowStock && (
-                      <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-md text-orange-600 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full shadow-sm">
+                    {lowStock && !outOfStock && (
+                      <div className="absolute top-3 left-3 bg-[var(--ink)] text-white text-[9px] font-semibold uppercase tracking-widest px-2 py-0.5">
                         Only {totalStock} left
                       </div>
                     )}
-
                     {outOfStock && (
-                      <div className="absolute inset-0 z-20 bg-white/80 backdrop-blur-[2px] flex items-center justify-center">
-                        <span className="bg-black text-white px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] shadow-xl">
-                          Out of stock
-                        </span>
+                      <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
+                        <span className="bg-[var(--ink)] text-white text-[9px] font-semibold uppercase tracking-widest px-3 py-1.5">Sold Out</span>
                       </div>
                     )}
                   </div>
 
-                  {/* INFO */}
-                  <div className="mt-6 px-2 space-y-2 text-center">
-                    <h3 
+                  {/* Info */}
+                  <div className="mt-3 space-y-0.5">
+                    <button
                       onClick={() => navigate(`/productdetail/${item._id}`)}
-                      className="text-[15px] font-light tracking-tight text-gray-950 cursor-pointer hover:text-black transition-colors truncate"
+                      className="text-[13px] font-light text-[var(--ink)] hover:text-[var(--ink-60)] transition-colors text-left w-full truncate block"
                     >
                       {item.name}
-                    </h3>
-
-                    <p className="text-lg font-semibold text-gray-950">
-                      {currency} {item.price}
-                    </p>
+                    </button>
+                    <p className="text-[13px] font-medium text-[var(--ink)] tabular-nums">{currency}{item.price}</p>
                   </div>
 
-                  {/* ACTION BAR */}
-                  <div className="mt-6 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
-                    <button
-                      disabled={outOfStock}
-                      onClick={() => {
-                        const defaultSize = item.sizes?.[0];
-                        if (!defaultSize) return;
-                        addToCart(item._id, defaultSize);
-                      }}
-                      className="w-full flex items-center justify-center gap-2 bg-black text-white py-4 rounded-2xl text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                    >
-                      <ShoppingBag size={14} />
-                      Add to Bag
-                    </button>
-
-                    <button
-                      onClick={() => navigate(`/productdetail/${item._id}`)}
-                      className="w-full py-4 rounded-2xl text-[11px] font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-black hover:bg-gray-50 transition"
-                    >
-                      View Details
-                    </button>
-                  </div>
-
+                  {/* Add to bag */}
+                  <button
+                    disabled={outOfStock}
+                    onClick={() => {
+                      const s = item.sizes?.[0];
+                      if (s) addToCart(item._id, s);
+                    }}
+                    className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 border border-[var(--border-md)] text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--ink-60)] hover:bg-[var(--ink)] hover:text-white hover:border-[var(--ink)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <FiShoppingBag size={12} />
+                    Add to Bag
+                  </button>
                 </div>
               );
             })}
           </div>
         )}
       </div>
-    </section>
+      <OurPolicy />
+    </div>
   );
 }
-
-export default Wishlist;

@@ -2,54 +2,71 @@ import React, { useContext, useEffect, useState, useMemo, useCallback } from "re
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { shopDataContext } from "../Context/ShopContext";
 import { userDataContext } from "../Context/UserContext";
-import { useToast } from "../Context/ToastContext";
-import { FiChevronRight, FiStar, FiTruck, FiRefreshCw, FiShield, FiShoppingBag, FiHeart, FiX, FiBell } from "react-icons/fi";
+import { useToast }         from "../Context/ToastContext";
+import {
+  FiChevronRight, FiStar, FiTruck, FiRefreshCw,
+  FiShield, FiShoppingBag, FiHeart, FiX, FiBell, FiPlus, FiMinus,
+} from "react-icons/fi";
 import axios from "axios";
-import Card from "../component/Card";
+import Card  from "../component/Card";
+import OurPolicy from "../component/OurPolicy";
 
-function ProductDetail() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const toast = useToast();
+/* ─────────────────────────────────────────────
+   ProductDetail
+───────────────────────────────────────────── */
+export default function ProductDetail() {
+  const { id }     = useParams();
+  const navigate   = useNavigate();
+  const location   = useLocation();
+  const toast      = useToast();
 
-  const { 
-    products, 
-    currency, 
-    addToCart, 
-    toggleWishlist, 
-    isWishlisted,
-    addToRecentlyViewed,
-    getRecommendations,
-    serverUrl,
+  const {
+    products, currency, addToCart,
+    toggleWishlist, isWishlisted,
+    addToRecentlyViewed, getRecommendations, serverUrl,
   } = useContext(shopDataContext);
 
   const { userData } = useContext(userDataContext);
-  const isLoggedIn = Boolean(userData?._id || userData?.name);
+  const isLoggedIn   = Boolean(userData?._id || userData?.name);
 
-  const [product, setProduct] = useState(null);
-  const [activeImage, setActiveImage] = useState("");
-  const [selectedSize, setSelectedSize] = useState("");
-  const [cartPending, setCartPending] = useState(false);
-  const [wishlistPending, setWishlistPending] = useState(false);
-  const [showSticky, setShowSticky] = useState(false);
-  
-  // REVIEW STATES
-  const [reviews, setReviews] = useState([]);
-  const [reviewStats, setReviewStats] = useState({ totalReviews: 0, averageRating: 0 });
+  const [product,       setProduct]       = useState(null);
+  const [activeImage,   setActiveImage]   = useState("");
+  const [selectedSize,  setSelectedSize]  = useState("");
+  const [quantity,      setQuantity]      = useState(1);
+  const [cartPending,   setCartPending]   = useState(false);
+  const [wlPending,     setWlPending]     = useState(false);
+  const [showSticky,    setShowSticky]    = useState(false);
+  const [accordionOpen, setAccordionOpen] = useState(null);
+
+  // Reviews
+  const [reviews,       setReviews]       = useState([]);
+  const [reviewStats,   setReviewStats]   = useState({ totalReviews: 0, averageRating: 0 });
   const [reviewLoading, setReviewLoading] = useState(false);
-  const [userRating, setUserRating] = useState(5);
-  const [userComment, setUserComment] = useState("");
-  const [submittingReview, setSubmittingReview] = useState(false);
-  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [userRating,    setUserRating]    = useState(5);
+  const [userComment,   setUserComment]   = useState("");
+  const [submitting,    setSubmitting]    = useState(false);
+  const [showForm,      setShowForm]      = useState(false);
 
-
-  const wishlisted = isWishlisted(id);
-  const recommendations = useMemo(() => 
-    product ? getRecommendations(product.category, product._id) : [], 
+  const wishlisted        = isWishlisted(id);
+  const recommendations   = useMemo(() =>
+    product ? getRecommendations(product.category, product._id) : [],
     [product, getRecommendations]
   );
 
+  /* ── Load product ── */
+  useEffect(() => {
+    const item = products.find(p => p._id === id);
+    if (item) {
+      setProduct(item);
+      setActiveImage(item.image1);
+      setQuantity(1);
+      addToRecentlyViewed(id);
+      fetchReviews();
+      if (item.sizes?.length > 0) setSelectedSize(item.sizes[0]);
+    }
+  }, [id, products]);
+
+  /* ── Reviews ── */
   const fetchReviews = useCallback(async () => {
     try {
       setReviewLoading(true);
@@ -59,459 +76,541 @@ function ProductDetail() {
         setReviewStats(res.data.stats);
       }
     } catch (err) {
-      console.error("Fetch Reviews Error:", err);
+      console.error("Reviews fetch error:", err);
     } finally {
       setReviewLoading(false);
     }
   }, [id, serverUrl]);
 
+  /* ── Sticky bar on scroll ── */
   useEffect(() => {
-    const item = products.find((p) => p._id === id);
-    if (item) {
-      setProduct(item);
-      setActiveImage(item.image1);
-      addToRecentlyViewed(id);
-      fetchReviews();
-      
-      if (item.sizes?.length > 0) {
-        setSelectedSize(item.sizes[0]);
-      }
-    }
-  }, [id, products, addToRecentlyViewed, fetchReviews]);
+    const h = () => setShowSticky(window.scrollY > 500);
+    window.addEventListener("scroll", h, { passive: true });
+    return () => window.removeEventListener("scroll", h);
+  }, []);
 
-  const handleReviewSubmit = async (e) => {
-    e.preventDefault();
-    if (!isLoggedIn) {
-      promptAuth("Sign in to leave a review.");
-      return;
-    }
+  const promptAuth = useCallback(msg => {
+    toast.info({
+      title: "Sign in to continue",
+      message: msg,
+      dedupeKey: `product:${id}:auth`,
+      actions: [
+        { label: "Sign in",       variant: "primary", onClick: () => navigate("/login",  { state: { from: location } }) },
+        { label: "Create account",                    onClick: () => navigate("/signup", { state: { from: location } }) },
+      ],
+    });
+  }, [id, location, navigate, toast]);
 
-    if (!userComment.trim()) {
-      toast.error("Please enter a comment");
-      return;
-    }
+  const handleAddToCart = async () => {
+    if (!product || cartPending) return;
+    if (!isLoggedIn) { promptAuth("Sign in to add items to your bag."); return; }
+    if (!selectedSize) { toast.error("Please select a size"); return; }
+    setCartPending(true);
+    for (let i = 0; i < quantity; i++) await addToCart(id, selectedSize);
+    setCartPending(false);
+  };
 
+  const handleWishlistToggle = async () => {
+    if (!product || wlPending) return;
+    if (!isLoggedIn) { promptAuth("Sign in to save items."); return; }
+    setWlPending(true);
+    await toggleWishlist(product);
+    setWlPending(false);
+  };
+
+  const handleStockNotify = async () => {
+    if (!selectedSize) { toast.error("Select a size first"); return; }
+    const email = userData?.email || window.prompt("Enter your email to be notified when this size returns:");
+    if (!email) return;
     try {
-      setSubmittingReview(true);
-      const res = await axios.post(`${serverUrl}/api/review/add`, {
-        productId: id,
-        rating: userRating,
-        comment: userComment
-      }, { withCredentials: true });
+      const res = await axios.post(`${serverUrl}/api/stock-alert/add`, { productId: id, size: selectedSize, email });
+      if (res.data.success) toast.success("Notification set! We'll email you when it's back.");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to set alert");
+    }
+  };
 
+  const handleReviewSubmit = async e => {
+    e.preventDefault();
+    if (!isLoggedIn) { promptAuth("Sign in to leave a review."); return; }
+    if (!userComment.trim()) { toast.error("Please write a comment"); return; }
+    try {
+      setSubmitting(true);
+      const res = await axios.post(`${serverUrl}/api/review/add`,
+        { productId: id, rating: userRating, comment: userComment },
+        { withCredentials: true }
+      );
       if (res.data.success) {
-        toast.success({ title: "Review Submitted", message: "Thank you for your feedback!" });
+        toast.success({ title: "Review submitted", message: "Thank you for your feedback." });
         setUserComment("");
-        setShowReviewForm(false);
-        fetchReviews(); // Refresh reviews
+        setShowForm(false);
+        fetchReviews();
       }
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to submit review");
     } finally {
-      setSubmittingReview(false);
+      setSubmitting(false);
     }
   };
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowSticky(window.scrollY > 600);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const promptAuth = useCallback(
-    (reason) => {
-      toast.info({
-        title: "Sign in to continue",
-        message: reason,
-        dedupeKey: `product:${id}:auth`,
-        actions: [
-          {
-            label: "Sign in",
-            variant: "primary",
-            onClick: () => navigate("/login", { state: { from: location } }),
-          },
-          {
-            label: "Create account",
-            onClick: () => navigate("/signup", { state: { from: location } }),
-          },
-        ],
-      });
-    },
-    [id, location, navigate, toast]
-  );
-
-  const handleAddToCart = async () => {
-    if (!product || cartPending) return;
-    
-    if (!isLoggedIn) {
-      promptAuth("Sign in to add items to your bag.");
-      return;
-    }
-
-    if (!selectedSize) {
-      toast.error("Please select a size");
-      return;
-    }
-
-    setCartPending(true);
-    await addToCart(id, selectedSize);
-    setCartPending(false);
-  };
-
-  const handleStockNotify = async () => {
-    if (!product || !selectedSize) {
-      toast.error("Please select a size first");
-      return;
-    }
-
-    const email = userData?.email || window.prompt("Enter your email to get notified when this size is back in stock:");
-    if (!email) return;
-
-    try {
-      const response = await axios.post(`${serverUrl}/api/stock-alert/add`, {
-        productId: product._id,
-        size: selectedSize,
-        email
-      });
-      if (response.data.success) {
-        toast.success("Notification set! We'll email you when it's back.");
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to set alert");
-    }
-  };
-
-  const handleWishlistToggle = async () => {
-    if (!product || wishlistPending) return;
-
-    if (!isLoggedIn) {
-      promptAuth("Save items to your wishlist.");
-      return;
-    }
-
-    setWishlistPending(true);
-    await toggleWishlist(product);
-    setWishlistPending(false);
-  };
-
-  if (!product) return (
-    <div className="h-screen flex items-center justify-center">
-      <div className="h-10 w-10 animate-spin rounded-full border-2 border-black/10 border-t-black" />
-    </div>
-  );
+  /* ── Not found / loading ── */
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-[var(--cream)] flex items-center justify-center" style={{ paddingTop: "var(--nav-height)" }}>
+        <p className="text-[13px] font-semibold tracking-[0.2em] uppercase text-[var(--ink)] opacity-60 animate-pulse">OneCart</p>
+      </div>
+    );
+  }
 
   const images = [product.image1, product.image2, product.image3, product.image4].filter(Boolean);
-  const stockMap = product.stock || {};
-  const remainingStock = typeof stockMap === "number" ? stockMap : (stockMap[selectedSize] || 0);
+  const stockMap        = product.stock || {};
+  const remainingStock  = typeof stockMap === "number" ? stockMap : (stockMap[selectedSize] || 0);
+  const isOOS           = remainingStock <= 0;
+  const isLowStock      = !isOOS && remainingStock <= 3;
+  const maxQty          = Math.min(remainingStock, 5);
+
+  const ACCORDION_ITEMS = [
+    { id: "desc",    title: "Description",       content: product.description },
+    { id: "care",    title: "Care Instructions",  content: "Machine wash cold at 30°C. Do not bleach. Tumble dry low. Iron on low heat. Do not dry clean." },
+    { id: "shipping", title: "Shipping & Returns", content: "Free standard delivery on all orders. Returns accepted within 30 days of delivery. Items must be unworn and in original condition." },
+  ];
 
   return (
-    <div className="bg-[#fafafa] min-h-screen pt-24 pb-20">
-      <div className="max-w-7xl mx-auto px-6 md:px-10">
-        {/* BREADCRUMBS */}
-        <nav className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-10">
-          <Link to="/" className="hover:text-black transition-colors">Home</Link>
-          <FiChevronRight />
-          <Link to="/collection" className="hover:text-black transition-colors">Collection</Link>
-          <FiChevronRight />
-          <span className="text-gray-900 truncate max-w-[150px]">{product.name}</span>
+    <div className="bg-[var(--cream)] min-h-screen" style={{ paddingTop: "var(--nav-height)" }}>
+      <div className="max-w-[1440px] mx-auto px-6 md:px-10 lg:px-16 py-8">
+
+        {/* ── BREADCRUMB ── */}
+        <nav className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--ink-40)] mb-10" aria-label="Breadcrumb">
+          <Link to="/" className="hover:text-[var(--ink)] transition-colors">Home</Link>
+          <FiChevronRight size={10} />
+          <Link to="/collection" className="hover:text-[var(--ink)] transition-colors">Collections</Link>
+          {product.category && (
+            <>
+              <FiChevronRight size={10} />
+              <Link to={`/collection?category=${product.category}`} className="hover:text-[var(--ink)] transition-colors">{product.category}</Link>
+            </>
+          )}
+          <FiChevronRight size={10} />
+          <span className="text-[var(--ink)] truncate max-w-[180px]">{product.name}</span>
         </nav>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
-          {/* IMAGE GALLERY */}
-          <div className="lg:col-span-7 flex flex-col-reverse md:flex-row gap-4">
-            <div className="flex md:flex-col gap-4 overflow-x-auto md:overflow-y-auto no-scrollbar md:h-[600px]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
+
+          {/* ── GALLERY ── */}
+          <div className="lg:col-span-7 flex flex-col-reverse md:flex-row gap-3">
+            {/* Thumbnails */}
+            <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto no-scrollbar md:max-h-[640px] shrink-0">
               {images.map((img, i) => (
                 <button
                   key={i}
                   onClick={() => setActiveImage(img)}
-                  className={`relative shrink-0 w-20 md:w-24 aspect-[3/4] rounded-2xl overflow-hidden border-2 transition-all ${activeImage === img ? "border-black shadow-lg" : "border-transparent"}`}
+                  aria-label={`View image ${i + 1}`}
+                  className={`shrink-0 w-16 md:w-[72px] aspect-[3/4] overflow-hidden transition-all border ${
+                    activeImage === img ? "border-[var(--ink)]" : "border-transparent opacity-60 hover:opacity-100"
+                  }`}
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
                 </button>
               ))}
             </div>
-            <div className="flex-1 bg-white rounded-[40px] overflow-hidden aspect-[3/4] shadow-[0_20px_80px_rgba(0,0,0,0.03)] border border-gray-100 group cursor-zoom-in">
-              <img src={activeImage} alt={product.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+
+            {/* Main image */}
+            <div className="flex-1 aspect-[3/4] overflow-hidden bg-[#EEECEA] relative group cursor-zoom-in">
+              <img
+                src={activeImage}
+                alt={product.name}
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+              />
+              {isLowStock && !isOOS && (
+                <div className="absolute top-4 left-4 bg-[var(--ink)] text-white text-[9px] font-semibold uppercase tracking-[0.15em] px-2.5 py-1">
+                  Only {remainingStock} left
+                </div>
+              )}
+              {isOOS && (
+                <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
+                  <span className="bg-[var(--ink)] text-white text-[10px] font-semibold uppercase tracking-[0.2em] px-4 py-2">Sold Out</span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* PRODUCT INFO */}
-          <div className="lg:col-span-5 flex flex-col pt-4">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="flex text-orange-400">
-                {[1, 2, 3, 4, 5].map((s) => <FiStar key={s} size={14} fill={s <= 4 ? "currentColor" : "none"} />)}
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 border-l border-gray-200 pl-3">
-                4.8 Rating • 120 Reviews
-              </span>
+          {/* ── PRODUCT INFO ── */}
+          <div className="lg:col-span-5 flex flex-col">
+
+            {/* Category + rating row */}
+            <div className="flex items-center justify-between mb-4">
+              <Link
+                to={`/collection?category=${product.category}`}
+                className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--ink-40)] hover:text-[var(--ink)] transition-colors"
+              >
+                {product.category} / {product.subCategory}
+              </Link>
+              {reviewStats.totalReviews > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <StarRow rating={reviewStats.averageRating} />
+                  <span className="text-[10px] text-[var(--ink-40)]">({reviewStats.totalReviews})</span>
+                </div>
+              )}
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-light tracking-tight text-gray-950 mb-4">{product.name}</h1>
-            
-            <p className="text-2xl font-semibold text-gray-900 mb-8">{currency}{product.price}</p>
-            
-            <p className="text-gray-500 leading-relaxed mb-10 text-base">{product.description}</p>
+            <h1
+              className="font-display font-light text-[var(--ink)] leading-[1.1] mb-3"
+              style={{ fontSize: "clamp(22px, 3vw, 36px)" }}
+            >
+              {product.name}
+            </h1>
 
-            {/* SIZE SELECTION */}
-            <div className="mb-10">
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-xs font-bold uppercase tracking-[0.2em] text-gray-950">Select Size</span>
-                <button className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors underline underline-offset-4">Size Guide</button>
+            <p className="text-[22px] font-light text-[var(--ink)] mb-8 tabular-nums">
+              {currency}{product.price}
+            </p>
+
+            {/* Size selector */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--ink)]">Size</p>
+                <button className="text-[9px] font-medium uppercase tracking-widest text-[var(--ink-40)] hover:text-[var(--ink)] transition-colors border-b border-[var(--ink-20)] pb-px">
+                  Size Guide
+                </button>
               </div>
-              <div className="flex flex-wrap gap-3">
-                {product.sizes?.map((size) => (
+              <div className="flex flex-wrap gap-2">
+                {product.sizes?.map(size => {
+                  const sizeStock = typeof stockMap === "number" ? stockMap : (stockMap[size] || 0);
+                  const oos = sizeStock <= 0;
+                  return (
+                    <button
+                      key={size}
+                      onClick={() => { if (!oos) { setSelectedSize(size); setQuantity(1); } }}
+                      disabled={oos}
+                      aria-pressed={selectedSize === size}
+                      className={`min-w-[48px] h-[48px] px-3 border text-[12px] font-medium transition-all relative ${
+                        selectedSize === size
+                          ? "border-[var(--ink)] bg-[var(--ink)] text-white"
+                          : oos
+                          ? "border-[var(--border)] text-[var(--ink-20)] cursor-not-allowed line-through"
+                          : "border-[var(--border-md)] text-[var(--ink)] hover:border-[var(--ink)]"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Quantity */}
+            {!isOOS && (
+              <div className="mb-8">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--ink)] mb-4">Quantity</p>
+                <div className="inline-flex items-center border border-[var(--border-md)]">
                   <button
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={`min-w-[64px] h-[64px] rounded-2xl border-2 transition-all flex items-center justify-center text-sm font-medium ${selectedSize === size ? "border-black bg-black text-white shadow-xl scale-105" : "border-gray-100 bg-white text-gray-900 hover:border-gray-200"}`}
+                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                    className="w-10 h-10 flex items-center justify-center text-[var(--ink-40)] hover:text-[var(--ink)] disabled:opacity-20 transition-colors"
+                    aria-label="Decrease quantity"
                   >
-                    {size}
+                    <FiMinus size={13} />
                   </button>
-                ))}
+                  <span className="w-10 text-center text-[13px] font-medium text-[var(--ink)] tabular-nums">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
+                    disabled={quantity >= maxQty}
+                    className="w-10 h-10 flex items-center justify-center text-[var(--ink-40)] hover:text-[var(--ink)] disabled:opacity-20 transition-colors"
+                    aria-label="Increase quantity"
+                  >
+                    <FiPlus size={13} />
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* ACTIONS */}
-            <div className="flex flex-col gap-4 mt-auto">
+            {/* CTAs */}
+            <div className="flex flex-col gap-3 mb-10">
               <button
                 type="button"
-                disabled={cartPending || remainingStock <= 0}
+                disabled={cartPending || isOOS}
                 onClick={handleAddToCart}
-                className={`w-full rounded-full py-5 uppercase tracking-[0.25em] text-xs font-bold transition shadow-2xl flex items-center justify-center gap-3 ${remainingStock <= 0 ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed" : "bg-black border-black text-white hover:bg-gray-800"}`}
+                className={`w-full py-4 text-[11px] font-semibold uppercase tracking-[0.2em] transition-colors flex items-center justify-center gap-3 ${
+                  isOOS
+                    ? "bg-[var(--border)] text-[var(--ink-40)] cursor-not-allowed"
+                    : "bg-[var(--ink)] text-white hover:bg-[var(--ink-80)]"
+                }`}
               >
-                {cartPending ? "Adding to Bag..." : remainingStock <= 0 ? "Out of Stock" : (
-                  <>
-                    <FiShoppingBag size={18} />
-                    Add to Bag
-                  </>
-                )}
+                <FiShoppingBag size={14} />
+                {cartPending ? "Adding…" : isOOS ? "Sold Out" : "Add to Bag"}
               </button>
 
-              {remainingStock <= 0 && selectedSize && (
+              {isOOS && selectedSize && (
                 <button
                   type="button"
                   onClick={handleStockNotify}
-                  className="w-full rounded-full border border-black py-5 uppercase tracking-[0.25em] text-xs font-bold text-black transition hover:bg-black hover:text-white flex items-center justify-center gap-3 animate-in fade-in slide-in-from-top-2"
+                  className="w-full py-4 border border-[var(--ink)] text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-white transition-colors flex items-center justify-center gap-3"
                 >
-                  <FiBell size={18} />
-                  Notify Me When Available
+                  <FiBell size={14} />
+                  Notify When Available
                 </button>
               )}
 
               <button
                 type="button"
-                disabled={wishlistPending}
+                disabled={wlPending}
                 onClick={handleWishlistToggle}
-                className={`w-full rounded-full border py-5 uppercase tracking-[0.25em] text-xs font-bold transition flex items-center justify-center gap-3 ${wishlisted ? "bg-red-50 border-red-100 text-red-500" : "bg-white border-gray-100 text-gray-900 hover:border-black"}`}
+                className={`w-full py-3.5 border text-[11px] font-semibold uppercase tracking-[0.2em] transition-colors flex items-center justify-center gap-3 ${
+                  wishlisted
+                    ? "border-[var(--ink)] text-[var(--ink)] bg-[var(--ink-06)]"
+                    : "border-[var(--border-md)] text-[var(--ink-60)] hover:border-[var(--ink)] hover:text-[var(--ink)]"
+                }`}
               >
-                <FiHeart size={18} className={wishlisted ? "fill-current" : ""} />
-                {wishlistPending ? "Updating..." : wishlisted ? "In Wishlist" : "Save to Wishlist"}
+                <FiHeart size={14} className={wishlisted ? "fill-current" : ""} />
+                {wlPending ? "Updating…" : wishlisted ? "In Wishlist" : "Add to Wishlist"}
               </button>
             </div>
 
-            {/* TRUST BADGES */}
-            <div className="grid grid-cols-3 gap-4 mt-12 pt-10 border-t border-gray-100">
-              <div className="flex flex-col items-center text-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><FiTruck /></div>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Free Express Delivery</span>
-              </div>
-              <div className="flex flex-col items-center text-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><FiRefreshCw /></div>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">30-Day Easy Returns</span>
-              </div>
-              <div className="flex flex-col items-center text-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><FiShield /></div>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Authenticity Guaranteed</span>
-              </div>
+            {/* Trust icons */}
+            <div className="grid grid-cols-3 gap-3 pt-8 border-t border-[var(--border)]">
+              {[
+                { icon: <FiTruck size={14} />,     label: "Free Delivery" },
+                { icon: <FiRefreshCw size={14} />, label: "30-Day Returns" },
+                { icon: <FiShield size={14} />,    label: "Authenticity" },
+              ].map(item => (
+                <div key={item.label} className="flex flex-col items-center text-center gap-2">
+                  <div className="text-[var(--ink-40)]">{item.icon}</div>
+                  <p className="text-[9px] font-medium uppercase tracking-widest text-[var(--ink-40)]">{item.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Accordion */}
+            <div className="mt-10 border-t border-[var(--border)]">
+              {ACCORDION_ITEMS.map(item => (
+                <div key={item.id} className="border-b border-[var(--border)]">
+                  <button
+                    onClick={() => setAccordionOpen(open => open === item.id ? null : item.id)}
+                    className="w-full flex items-center justify-between py-4 text-left"
+                    aria-expanded={accordionOpen === item.id}
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--ink)]">{item.title}</p>
+                    <span className="text-[var(--ink-40)] text-[18px] leading-none">
+                      {accordionOpen === item.id ? "−" : "+"}
+                    </span>
+                  </button>
+                  {accordionOpen === item.id && (
+                    <p className="text-[13px] font-light text-[var(--ink-60)] leading-relaxed pb-5 pr-6 slide-in-from-top">
+                      {item.content}
+                    </p>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* RECOMMENDATIONS */}
+        {/* ── RECOMMENDATIONS ── */}
         {recommendations.length > 0 && (
-          <section className="mt-32">
-            <div className="flex items-center gap-4 mb-12">
-              <div className="h-[1px] w-12 bg-black" />
-              <h2 className="text-2xl md:text-3xl font-light tracking-tight text-gray-950">You May Also <span className="italic">Like</span></h2>
+          <section className="mt-28 pt-16 border-t border-[var(--border)]">
+            <div className="mb-10">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-2">You may also like</p>
+              <h2 className="font-display font-light text-[var(--ink)]" style={{ fontSize: "clamp(22px, 2.5vw, 34px)" }}>
+                Related Pieces
+              </h2>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              {recommendations.map((item) => (
-                <Card 
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-5 gap-y-10">
+              {recommendations.map(item => (
+                <Card
                   key={item._id}
                   id={item._id}
                   name={item.name}
                   price={item.price}
                   image={item.image1}
+                  hoverImage={item.image2}
                 />
               ))}
             </div>
           </section>
         )}
 
-        {/* REVIEWS SECTION */}
-        <div className="mt-32 pt-20 border-t border-gray-100">
+        {/* ── REVIEWS ── */}
+        <section className="mt-28 pt-16 border-t border-[var(--border)]">
           <div className="flex flex-col md:flex-row gap-16">
-            {/* RATING SUMMARY */}
-            <div className="w-full md:w-[320px] shrink-0">
-              <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-950 mb-8">Customer Reviews</h3>
-              <div className="flex items-center gap-6 mb-8">
-                <span className="text-7xl font-light text-gray-950">{reviewStats.averageRating || "0"}</span>
-                <div className="flex flex-col gap-1">
-                  <div className="flex text-orange-400">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <FiStar key={s} size={18} fill={s <= Math.round(reviewStats.averageRating) ? "currentColor" : "none"} />
-                    ))}
-                  </div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Based on {reviewStats.totalReviews} Reviews</p>
+
+            {/* Summary */}
+            <div className="w-full md:w-72 shrink-0">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-8">Reviews</p>
+              <div className="flex items-end gap-5 mb-6">
+                <span className="font-display font-light text-[var(--ink)]" style={{ fontSize: "clamp(48px, 6vw, 72px)" }}>
+                  {reviewStats.averageRating || "–"}
+                </span>
+                <div className="pb-2">
+                  <StarRow rating={reviewStats.averageRating} />
+                  <p className="text-[10px] text-[var(--ink-40)] mt-1 uppercase tracking-widest">{reviewStats.totalReviews} reviews</p>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-4">
-                {[5, 4, 3, 2, 1].map((rating) => {
-                  const count = reviews.filter(r => r.rating === rating).length;
-                  const percentage = reviewStats.totalReviews > 0 ? (count / reviewStats.totalReviews) * 100 : 0;
+              {/* Rating bars */}
+              <div className="space-y-2.5">
+                {[5, 4, 3, 2, 1].map(r => {
+                  const count = reviews.filter(rv => rv.rating === r).length;
+                  const pct   = reviewStats.totalReviews > 0 ? (count / reviewStats.totalReviews) * 100 : 0;
                   return (
-                    <div key={rating} className="flex items-center gap-4 group cursor-help">
-                      <span className="text-[10px] font-bold text-gray-400 w-2">{rating}</span>
-                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-black transition-all duration-1000" 
-                          style={{ width: `${percentage}%` }}
-                        />
+                    <div key={r} className="flex items-center gap-3">
+                      <span className="text-[10px] text-[var(--ink-40)] w-2 shrink-0">{r}</span>
+                      <div className="flex-1 h-1 bg-[var(--border)]">
+                        <div className="h-full bg-[var(--ink)] transition-all duration-700" style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="text-[9px] font-bold text-gray-300 w-6 text-right">{count}</span>
+                      <span className="text-[10px] text-[var(--ink-20)] w-4 text-right tabular-nums">{count}</span>
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* REVIEWS LIST & FORM */}
+            {/* Review list */}
             <div className="flex-1">
-              <div className="flex items-center justify-between mb-12">
-                 <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                   {reviewLoading ? "Loading reviews..." : `Showing ${reviews.length} Latest Reviews`}
-                 </p>
-                 {!showReviewForm && (
-                   <button 
-                    onClick={() => setShowReviewForm(true)}
-                    className="text-[10px] font-bold uppercase tracking-widest text-gray-950 border-b border-black pb-1 hover:opacity-60 transition-opacity"
-                   >
-                     Write a Review
-                   </button>
-                 )}
+              <div className="flex items-center justify-between mb-10">
+                <p className="text-[10px] font-medium uppercase tracking-widest text-[var(--ink-40)]">
+                  {reviewLoading ? "Loading…" : `${reviews.length} review${reviews.length !== 1 ? "s" : ""}`}
+                </p>
+                {!showForm && (
+                  <button
+                    onClick={() => setShowForm(true)}
+                    className="text-[10px] font-semibold uppercase tracking-widest text-[var(--ink)] border-b border-[var(--ink)] pb-0.5 hover:text-[var(--ink-60)] transition-colors"
+                  >
+                    Write a Review
+                  </button>
+                )}
               </div>
 
-              {showReviewForm && (
-                <div className="mb-16 p-8 bg-gray-50 rounded-[32px] border border-gray-100 animate-in fade-in slide-in-from-top-4">
-                   <div className="flex justify-between items-center mb-8">
-                      <h4 className="text-xl font-light">Share your experience</h4>
-                      <button onClick={() => setShowReviewForm(false)} className="text-gray-400 hover:text-black"><FiX size={20}/></button>
-                   </div>
-                   <form onSubmit={handleReviewSubmit}>
-                      <div className="mb-8">
-                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4">Your Rating</p>
-                         <div className="flex gap-2">
-                            {[1, 2, 3, 4, 5].map((s) => (
-                               <button 
-                                key={s} 
-                                type="button"
-                                onClick={() => setUserRating(s)}
-                                className={`text-2xl transition-all ${s <= userRating ? "text-orange-400 scale-110" : "text-gray-200 hover:text-gray-300"}`}
-                               >
-                                  <FiStar fill={s <= userRating ? "currentColor" : "none"} />
-                               </button>
-                            ))}
-                         </div>
+              {showForm && (
+                <div className="mb-12 p-6 bg-white border border-[var(--border)] slide-in-from-top">
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--ink)]">Share your experience</p>
+                    <button onClick={() => setShowForm(false)} className="text-[var(--ink-40)] hover:text-[var(--ink)] transition-colors">
+                      <FiX size={18} />
+                    </button>
+                  </div>
+                  <form onSubmit={handleReviewSubmit}>
+                    <div className="mb-5">
+                      <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--ink-40)] mb-3">Rating</p>
+                      <div className="flex gap-1.5">
+                        {[1, 2, 3, 4, 5].map(s => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setUserRating(s)}
+                            aria-label={`Rate ${s} star${s > 1 ? "s" : ""}`}
+                            className={`transition-opacity ${s <= userRating ? "opacity-100" : "opacity-20"}`}
+                          >
+                            <FiStar size={22} fill={s <= userRating ? "currentColor" : "none"} className="text-[var(--ink)]" />
+                          </button>
+                        ))}
                       </div>
-                      <div className="mb-8">
-                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4">Your Thoughts</p>
-                         <textarea 
-                          rows="4" 
-                          value={userComment}
-                          onChange={(e) => setUserComment(e.target.value)}
-                          placeholder="What did you like about this product? How is the fit and quality?"
-                          className="w-full bg-white border border-gray-100 rounded-2xl p-5 text-sm outline-none focus:ring-2 focus:ring-black/5 transition-all"
-                         />
-                      </div>
-                      <button 
-                        type="submit" 
-                        disabled={submittingReview}
-                        className="bg-black text-white px-10 py-4 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-gray-800 transition disabled:opacity-50"
-                      >
-                        {submittingReview ? "Submitting..." : "Post Review"}
-                      </button>
-                   </form>
+                    </div>
+                    <div className="mb-6">
+                      <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--ink-40)] mb-3">Comment</p>
+                      <textarea
+                        rows={4}
+                        value={userComment}
+                        onChange={e => setUserComment(e.target.value)}
+                        placeholder="How is the fit and quality?"
+                        className="w-full border-b border-[var(--border-md)] focus:border-[var(--ink)] outline-none bg-transparent text-[13px] font-light text-[var(--ink)] placeholder:text-[var(--ink-30)] pb-2 resize-none transition-colors"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="bg-[var(--ink)] text-white px-8 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] hover:bg-[var(--ink-80)] transition-colors disabled:opacity-50"
+                    >
+                      {submitting ? "Submitting…" : "Post Review"}
+                    </button>
+                  </form>
                 </div>
               )}
 
-              <div className="flex flex-col gap-12">
-                {reviews.map((review) => (
-                  <ReviewCard 
+              <div className="space-y-10 divide-y divide-[var(--border)]">
+                {reviews.map(review => (
+                  <ReviewCard
                     key={review._id}
-                    author={review.userName} 
-                    date={new Date(review.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} 
-                    rating={review.rating} 
+                    author={review.userName}
+                    date={new Date(review.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    rating={review.rating}
                     content={review.comment}
                   />
                 ))}
-                
                 {reviews.length === 0 && !reviewLoading && (
-                  <div className="py-20 text-center bg-gray-50/50 rounded-[40px] border border-dashed border-gray-200">
-                    <p className="text-gray-400 text-sm italic">No reviews yet. Be the first to share your experience!</p>
+                  <div className="py-16 text-center">
+                    <p className="text-[13px] font-light text-[var(--ink-40)]">No reviews yet. Be the first to share your experience.</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
 
-      {/* STICKY ADD TO CART (MOBILE/SCROLL) */}
-      <div className={`fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-gray-100 p-4 transition-transform duration-500 ${showSticky ? "translate-y-0" : "translate-y-full"}`}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="hidden sm:flex items-center gap-4">
-            <img src={product.image1} alt="" className="w-12 h-12 rounded-lg object-cover" />
-            <div>
-              <p className="text-xs font-bold text-gray-900 truncate max-w-[200px]">{product.name}</p>
-              <p className="text-xs text-gray-500">{currency}{product.price}</p>
+      {/* ── STICKY BAR ── */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-40 bg-[var(--cream)]/95 backdrop-blur-sm border-t border-[var(--border)] py-3 px-6 transition-transform duration-400 ${
+          showSticky ? "translate-y-0" : "translate-y-full"
+        }`}
+        aria-hidden={!showSticky}
+      >
+        <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-4">
+          <div className="hidden sm:flex items-center gap-4 min-w-0">
+            <div className="w-10 h-12 overflow-hidden bg-[#EEECEA] shrink-0">
+              <img src={product.image1} alt="" className="w-full h-full object-cover" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[12px] font-medium text-[var(--ink)] truncate">{product.name}</p>
+              <p className="text-[11px] text-[var(--ink-40)]">{currency}{product.price}</p>
             </div>
           </div>
           <button
             onClick={handleAddToCart}
-            disabled={cartPending || remainingStock <= 0}
-            className="flex-1 sm:flex-none sm:min-w-[200px] bg-black text-white py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] shadow-xl hover:bg-gray-800 transition"
+            disabled={cartPending || isOOS}
+            className="flex-1 sm:flex-none sm:w-52 bg-[var(--ink)] text-white py-3 text-[10px] font-semibold uppercase tracking-[0.2em] hover:bg-[var(--ink-80)] transition-colors disabled:opacity-40"
           >
-            {cartPending ? "Adding..." : "Add to Bag"}
+            {cartPending ? "Adding…" : isOOS ? "Sold Out" : "Add to Bag"}
           </button>
         </div>
       </div>
+
+      <OurPolicy />
     </div>
   );
 }
 
+/* ── Star row ── */
+function StarRow({ rating }) {
+  return (
+    <div className="flex gap-0.5" aria-label={`${rating} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map(s => (
+        <FiStar
+          key={s}
+          size={12}
+          className="text-[var(--ink)]"
+          fill={s <= Math.round(rating) ? "currentColor" : "none"}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ── Review card ── */
 function ReviewCard({ author, date, rating, content }) {
   return (
-    <div className="group">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-xs font-bold text-gray-400 border border-gray-100 uppercase">{author.charAt(0)}</div>
+    <div className="pt-8 first:pt-0">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-[var(--ink-06)] border border-[var(--border)] flex items-center justify-center text-[11px] font-semibold text-[var(--ink-40)] uppercase shrink-0">
+            {author?.charAt(0) || "?"}
+          </div>
           <div>
-            <p className="text-sm font-semibold text-gray-950">{author}</p>
-            <div className="flex text-orange-400 mt-1">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <FiStar key={s} size={10} fill={s <= rating ? "currentColor" : "none"} />
-              ))}
-            </div>
+            <p className="text-[12px] font-medium text-[var(--ink)]">{author}</p>
+            <StarRow rating={rating} />
           </div>
         </div>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{date}</span>
+        <span className="text-[10px] text-[var(--ink-30)] uppercase tracking-widest shrink-0">{date}</span>
       </div>
-      <p className="text-gray-500 text-sm leading-relaxed max-w-2xl">{content}</p>
+      <p className="text-[13px] font-light text-[var(--ink-60)] leading-relaxed max-w-2xl">{content}</p>
     </div>
   );
 }
-
-export default ProductDetail;
