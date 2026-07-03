@@ -25,8 +25,31 @@ function OurPolicy() {
   const navigate = useNavigate();
 
   return (
-    <footer className="bg-[var(--cream)] border-t border-[var(--border)]">
-      <div className="max-w-[1440px] mx-auto px-6 md:px-10 lg:px-16 py-16 md:py-20">
+    <>
+      {/* ── FOOTER STORY BANNER ── */}
+      <div className="relative w-full h-[320px] md:h-[400px] overflow-hidden bg-[#EEECEA] border-t border-[var(--border)]">
+        <img 
+          src="https://images.unsplash.com/photo-1606744824163-985d376605aa?q=80&w=1000&auto=format&fit=crop" 
+          alt="Campaign Lookbook" 
+          className="w-full h-full object-cover object-center filter brightness-[0.85]"
+          loading="lazy"
+        />
+        <div className="absolute inset-0 bg-[var(--ink)]/20 flex flex-col items-center justify-center text-center p-6">
+          <p className="text-white text-[9px] font-semibold uppercase tracking-[0.4em] mb-4">The Anthology</p>
+          <h3 className="text-white font-display font-light italic leading-tight mb-8" style={{ fontSize: "clamp(24px, 4vw, 48px)" }}>
+            Worn with intention.
+          </h3>
+          <Link
+            to="/collection"
+            className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white border-b border-white/50 pb-1 hover:border-white transition-all duration-300"
+          >
+            Explore the Campaign
+          </Link>
+        </div>
+      </div>
+
+      <footer className="bg-[var(--cream)] border-t border-[var(--border)]">
+        <div className="max-w-[1440px] mx-auto px-6 md:px-10 lg:px-16 py-16 md:py-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
 
           {/* Brand column */}
@@ -87,7 +110,8 @@ function OurPolicy() {
           <p className="text-[10px] text-[var(--ink-30)] uppercase tracking-widest">India · English · INR</p>
         </div>
       </div>
-    </footer>
+      </footer>
+    </>
   );
 }
 

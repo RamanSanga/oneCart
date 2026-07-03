@@ -3,14 +3,11 @@ import { Link } from "react-router-dom";
 import Newsletter from "../component/NewLetterBox";
 import OurPolicy from "../component/OurPolicy";
 
-import heroMen   from "../assets/hero_men.jpg";
-import heroWomen from "../assets/hero_women.jpg";
-import catWomen  from "../assets/cat_women.jpg";
-
-// Campaign images — same visual language as the rest of the site
-const STORY_IMAGE  = heroMen;
-const CRAFT_IMAGE  = heroWomen;
-const DETAIL_IMAGE = catWomen;
+// Campaign images — completely unique editorial shots
+const STORY_IMAGE  = "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1000&auto=format&fit=crop";
+const CRAFT_IMAGE  = "https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?q=80&w=1000&auto=format&fit=crop";
+const DETAIL_IMAGE = "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?q=80&w=1000&auto=format&fit=crop";
+const MATERIALS_IMAGE = "https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=1000&auto=format&fit=crop";
 
 const VALUES = [
   {
@@ -136,8 +133,32 @@ function About() {
         </div>
       </section>
 
+      {/* ── PREMIUM MATERIALS ── */}
+      <section className="px-6 md:px-10 lg:px-16 py-20 md:py-28 border-b border-[var(--border)] bg-[var(--cream)]">
+        <div className="max-w-[1440px] mx-auto grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+          <div className="max-w-lg">
+            <p className="reveal text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-6">Honest Textures</p>
+            <h2 className="reveal reveal-delay-1 font-display font-light leading-tight text-[var(--ink)] mb-10"
+                style={{ fontSize: "clamp(28px, 3.5vw, 48px)" }}>
+              The touch of <em className="italic">fine</em> materials.
+            </h2>
+            <div className="space-y-6 text-[13px] font-light leading-relaxed text-[var(--ink-60)]">
+              <p className="reveal reveal-delay-2">
+                We select only premium, certified natural fibers. From extra-fine organic cotton and long-staple linen to high-grade wools, our fabrics are selected for their texture, comfort, and durability.
+              </p>
+              <p className="reveal reveal-delay-3">
+                By choosing materials that wear in rather than wear out, we ensure each item develops a unique character over time, becoming a cherished, personal companion.
+              </p>
+            </div>
+          </div>
+          <div className="scale-reveal overflow-hidden aspect-[4/5]">
+            <img src={MATERIALS_IMAGE} alt="Close up of high quality wool overcoat" className="w-full h-full object-cover" />
+          </div>
+        </div>
+      </section>
+
       {/* ── VALUES ── */}
-      <section className="px-6 md:px-10 lg:px-16 py-20 md:py-28 border-b border-[var(--border)]">
+      <section className="px-6 md:px-10 lg:px-16 py-20 md:py-28 border-b border-[var(--border)] bg-white">
         <div className="max-w-[1440px] mx-auto">
           <div className="mb-16">
             <p className="reveal text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-4">What We Stand For</p>

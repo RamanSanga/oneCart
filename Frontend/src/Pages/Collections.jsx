@@ -6,6 +6,11 @@ import Skeleton from "../component/Skeleton";
 import OurPolicy from "../component/OurPolicy";
 import { FiFilter, FiX, FiChevronDown, FiChevronUp } from "react-icons/fi";
 
+import catMen from "../assets/cat_men.jpg";
+import catWomen from "../assets/cat_women.jpg";
+import catKids from "../assets/cat_kids.jpg";
+import heroStreet from "../assets/hero_women_street.jpg";
+
 const CATEGORIES     = ["Men", "Women", "Kids"];
 const SUB_CATEGORIES = ["TopWear", "BottomWear", "WinterWear"];
 const SORT_OPTIONS   = [
@@ -77,39 +82,95 @@ export default function Collections() {
     setFiltered(temp);
   }, [selectedCategory, selectedSubCategory, priceMax, sort, products, search, showSearch]);
 
-  // ── Page title ──
-  const getPageTitle = () => {
-    if (showSearch && search.trim()) return `Search: "${search}"`;
-    if (selectedCategory.length === 1 && selectedSubCategory.length === 0) return selectedCategory[0];
-    if (selectedSubCategory.length === 1 && selectedCategory.length === 0) return selectedSubCategory[0];
-    if (selectedCategory.length === 1 && selectedSubCategory.length === 1) return `${selectedCategory[0]} · ${selectedSubCategory[0]}`;
-    return "All Collections";
+  // ── Dynamic lookbook banner content ──
+  const getBannerDetails = () => {
+    if (showSearch && search.trim()) {
+      return {
+        title: "Search Results",
+        subtitle: `Query: "${search}"`,
+        description: `Browse matching results for your query. Use the filters on the left to refine by department, category, or price.`,
+        image: heroStreet,
+      };
+    }
+    const cat = selectedCategory[0];
+    if (cat === "Men") {
+      return {
+        title: "Functional Tailoring",
+        subtitle: "Men's Collection",
+        description: "A study in structure and utility. Natural linen shirts, lightweight tailoring, and relaxed trousers designed for ease of movement.",
+        image: catMen,
+      };
+    }
+    if (cat === "Women") {
+      return {
+        title: "Serene Silhouettes",
+        subtitle: "Women's Collection",
+        description: "Soft shapes in organic fabrics. From flowing linen dresses to oversized outerwear, built with clean profiles and delicate details.",
+        image: catWomen,
+      };
+    }
+    if (cat === "Kids") {
+      return {
+        title: "Conscious Playwear",
+        subtitle: "Kids' Collection",
+        description: "Comfort, resilience, and simplicity. Crafted with super soft organic cotton and details that accommodate play.",
+        image: catKids,
+      };
+    }
+    return {
+      title: "The Core Anthology",
+      subtitle: "All Collections",
+      description: "Our complete list of timeless staples. Neutral palettes, elevated cuts, and deliberate craftsmanship for every department.",
+      image: heroStreet,
+    };
   };
+
+  const banner = getBannerDetails();
 
   return (
     <div className="min-h-screen bg-[var(--cream)]" style={{ paddingTop: "var(--nav-height)" }}>
 
-      {/* ── PAGE HEADER ── */}
-      <div className="border-b border-[var(--border)] px-6 md:px-10 lg:px-16 py-8 md:py-10">
-        <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-3">
-          <div>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--ink-40)] mb-1.5">Shop</p>
-            <h1 className="font-display font-light tracking-tight text-[var(--ink)] leading-none"
-                style={{ fontSize: "clamp(24px, 3vw, 38px)" }}>
-              {getPageTitle()}
+      {/* ── LOOKBOOK BANNER ── */}
+      <div className="border-b border-[var(--border)] bg-white">
+        <div className="max-w-[1440px] mx-auto grid lg:grid-cols-2 gap-0">
+          {/* Left panel: Info */}
+          <div className="px-6 md:px-10 lg:px-16 py-16 md:py-24 flex flex-col justify-center space-y-6">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.35em] text-[var(--ink-40)]">
+              {banner.subtitle}
+            </p>
+            <h1 className="font-display font-light leading-[1.1] tracking-tight text-[var(--ink)]"
+                style={{ fontSize: "clamp(32px, 4.5vw, 56px)" }}>
+              {banner.title}
             </h1>
+            <p className="text-[13px] font-light leading-relaxed text-[var(--ink-60)] max-w-md">
+              {banner.description}
+            </p>
           </div>
+          {/* Right panel: Image */}
+          <div className="aspect-[16/10] lg:aspect-auto lg:h-[450px] overflow-hidden bg-[#EEECEA] border-t lg:border-t-0 lg:border-l border-[var(--border)]">
+            <img 
+              src={banner.image} 
+              alt={banner.title} 
+              className="w-full h-full object-cover object-center"
+              loading="lazy"
+            />
+          </div>
+        </div>
+      </div>
 
+      {/* ── FILTER META BAR ── */}
+      <div className="border-b border-[var(--border)] px-6 md:px-10 lg:px-16 py-6 bg-[var(--cream)]">
+        <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-6">
             {hasFilters && (
               <button
                 onClick={resetFilters}
-                className="text-[10px] font-medium uppercase tracking-widest text-[var(--ink-40)] hover:text-[var(--ink)] transition-colors border-b border-transparent hover:border-[var(--ink-40)]"
+                className="text-[10px] font-semibold uppercase tracking-widest text-[var(--ink)] border-b border-[var(--ink)] pb-0.5 hover:text-[var(--ink-60)] hover:border-[var(--ink-60)] transition-colors"
               >
-                Clear filters
+                Reset All Filters
               </button>
             )}
-            <p className="text-[12px] text-[var(--ink-40)]">{filtered.length} products</p>
+            <p className="text-[12px] font-medium text-[var(--ink-40)]">{filtered.length} piece{filtered.length !== 1 ? "s" : ""}</p>
           </div>
         </div>
 

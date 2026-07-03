@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import OurPolicy from "../component/OurPolicy";
 
-import heroWomen from "../assets/hero_women.jpg";
+const SHOWROOM_IMAGE = "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop";
 
 const SUPPORT_ITEMS = [
   { label: "Customer Care",          value: "contact@onecart.com",     note: "Monday–Saturday, 10 AM – 6 PM IST. Response within 24 hours." },
@@ -42,7 +42,7 @@ function Contact() {
       <div className="max-w-[1440px] mx-auto grid lg:grid-cols-2 gap-0 border-b border-[var(--border)]">
         {/* Image */}
         <div className="hidden lg:block h-[600px] overflow-hidden relative">
-          <img src={heroWomen} alt="OneCart showroom" className="w-full h-full object-cover" />
+          <img src={SHOWROOM_IMAGE} alt="OneCart showroom" className="w-full h-full object-cover" />
           <div className="absolute bottom-8 left-8">
             <p className="text-white text-[10px] font-semibold uppercase tracking-[0.25em]">OneCart / India</p>
           </div>

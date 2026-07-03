@@ -1,6 +1,5 @@
 import { useContext, useState } from "react";
 import googleIcon from "../assets/google.png";
-import heroMen from "../assets/hero_men.jpg";
 import { Link, useNavigate } from "react-router-dom";
 import { authDataContext } from "../Context/AuthContext";
 import { userDataContext } from "../Context/UserContext";
@@ -56,7 +55,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex bg-[var(--cream)] text-[var(--ink)]">
       {/* ── LEFT IMAGE ── */}
       <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
-        <img src={heroMen} alt="OneCart editorial" className="w-full h-full object-cover" />
+        <img src="https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=1000&auto=format&fit=crop" alt="OneCart editorial" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-[var(--ink)]/20" />
         <div className="absolute bottom-12 left-10">
           <p className="text-white text-[10px] font-semibold uppercase tracking-[0.25em] mb-2">OneCart</p>

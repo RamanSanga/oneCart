@@ -162,7 +162,34 @@ export default function ProductDetail() {
     );
   }
 
-  const images = [product.image1, product.image2, product.image3, product.image4].filter(Boolean);
+  // Gather product images and supplement with matching editorial lifestyle/closeup campaign visuals
+  let rawImages = [product.image1, product.image2, product.image3, product.image4].filter(Boolean);
+  if (product.category === "Men") {
+    rawImages = [
+      ...rawImages,
+      "https://images.unsplash.com/photo-1618886614638-80e3c103d31a?q=80&w=600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=600&auto=format&fit=crop"
+    ];
+  } else if (product.category === "Women") {
+    rawImages = [
+      ...rawImages,
+      "https://images.unsplash.com/photo-1485230895905-ec40ba36b9bc?q=80&w=600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?q=80&w=600&auto=format&fit=crop"
+    ];
+  } else if (product.category === "Kids") {
+    rawImages = [
+      ...rawImages,
+      "https://images.unsplash.com/photo-1519689680058-324335c77eba?q=80&w=600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?q=80&w=600&auto=format&fit=crop"
+    ];
+  } else {
+    rawImages = [
+      ...rawImages,
+      "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?q=80&w=600&auto=format&fit=crop"
+    ];
+  }
+  const images = Array.from(new Set(rawImages)).slice(0, 4);
+
   const stockMap        = product.stock || {};
   const remainingStock  = typeof stockMap === "number" ? stockMap : (stockMap[selectedSize] || 0);
   const isOOS           = remainingStock <= 0;
