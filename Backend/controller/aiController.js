@@ -44,28 +44,15 @@ function parsePayload(schema, payload) {
 }
 
 function sendAiError(res, error) {
-  let statusCode = error.statusCode || 500;
-  let message = error.message || "AI request failed";
-
-  // Translate specific library / model errors to production-ready HTTP status codes
-  const errText = String(error.message || "").toLowerCase();
-  
-  if (errText.includes("quota") || errText.includes("429") || errText.includes("too many requests")) {
-    statusCode = 429;
-    message = "AI service rate limit exceeded. Please wait a few seconds before retrying.";
-  } else if (errText.includes("chroma") || errText.includes("fetch") && errText.includes("8001")) {
-    statusCode = 503;
-    message = "The product catalog service is temporarily offline. Please try again in a moment.";
-  } else if (errText.includes("google") || errText.includes("generativeai")) {
-    statusCode = 502;
-    message = "AI generation model failed to respond. Please try again.";
-  }
-
+  console.error("[AI Diagnostic Error]:", error);
+  const statusCode = error.statusCode || 500;
   return res.status(statusCode).json({
     success: false,
     error: {
-      message,
-      details: error.details || null,
+      message: error.message || "AI request failed",
+      stack: error.stack || null,
+      details: error.details || error.message || null,
+      rawError: JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error)))
     },
   });
 }
@@ -174,24 +161,70 @@ export async function searchAi(req, res) {
   }
 }
 
-export async function healthAi(_req, res) {
-  let status = "healthy";
+import mongoose from "mongoose";
+import { getChromaConfig } from "../ai/vectorStore.js";
+import { embedText } from "../ai/embedding.js";
 
+export async function healthAi(_req, res) {
+  const diagnostics = {
+    environment: {
+      GOOGLE_API_KEY: process.env.GOOGLE_API_KEY ? `Loaded (${process.env.GOOGLE_API_KEY.substring(0, 8)}...)` : "Missing",
+      GEMINI_MODEL: process.env.GEMINI_MODEL || "Not set (using default: gemini-2.5-flash)",
+      CHROMA_URL: process.env.CHROMA_URL || "Not set",
+      CHROMA_HOST: process.env.CHROMA_HOST || "Not set",
+      CHROMA_PORT: process.env.CHROMA_PORT || "Not set",
+    },
+    mongoDb: {
+      connected: mongoose.connection.readyState === 1,
+      state: mongoose.connection.readyState,
+    },
+    chromaDb: {
+      connected: false,
+      config: null,
+      collectionExists: false,
+      productCount: 0,
+      error: null,
+    },
+    embeddingPipeline: {
+      working: false,
+      error: null,
+    },
+    status: "healthy",
+  };
+
+  // 1. Get Chroma Configuration
   try {
-    // Dynamically test connection to ChromaDB
+    diagnostics.chromaDb.config = getChromaConfig();
+  } catch (err) {
+    diagnostics.chromaDb.error = `Config read error: ${err.message}`;
+  }
+
+  // 2. Test ChromaDB Connection & Collection Count
+  try {
     const vectorStore = await getProductVectorStore();
-    await vectorStore.collection.count();
-  } catch (error) {
-    console.error("[AI Health] ChromaDB health check failed:", error);
-    status = "degraded";
+    diagnostics.chromaDb.connected = true;
+    diagnostics.chromaDb.collectionExists = true;
+    
+    // Fetch product count
+    const count = await vectorStore.collection.count();
+    diagnostics.chromaDb.productCount = count;
+  } catch (err) {
+    diagnostics.chromaDb.error = `Connection/Count error: ${err.message}`;
+    diagnostics.status = "degraded";
+  }
+
+  // 3. Test Embedding Generator Pipeline
+  try {
+    const testEmbedding = await embedText("Test product context");
+    diagnostics.embeddingPipeline.working = Array.isArray(testEmbedding) && testEmbedding.length > 0;
+  } catch (err) {
+    diagnostics.embeddingPipeline.error = `Embedding error: ${err.message}`;
+    diagnostics.status = "degraded";
   }
 
   return res.status(200).json({
     success: true,
-    llm: "Gemini",
-    vectorStore: "ChromaDB",
-    embedding: "MiniLM",
-    status,
+    diagnostics,
   });
 }
 
