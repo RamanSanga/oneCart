@@ -80,6 +80,22 @@ connectDb()
   .then(() => {
     app.listen(port, () => {
       console.log(`Server running on port ${port}`);
+
+      // Start background keep-alive ping for ChromaDB to prevent Render from sleeping (runs every 10 minutes)
+      const keepChromaAlive = async () => {
+        try {
+          const { getChromaClient } = await import("./ai/vectorStore.js");
+          const client = getChromaClient();
+          const hb = await client.heartbeat();
+          console.log(`[Chroma Keep-Alive]: Ping success, heartbeat: ${hb}`);
+        } catch (err) {
+          console.warn(`[Chroma Keep-Alive]: Ping failed: ${err.message}`);
+        }
+      };
+
+      // Trigger first ping after 5s and then repeat every 10 minutes
+      setTimeout(keepChromaAlive, 5000);
+      setInterval(keepChromaAlive, 10 * 60 * 1000);
     });
   })
   .catch((err) => {

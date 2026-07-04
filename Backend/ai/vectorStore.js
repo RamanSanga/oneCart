@@ -62,7 +62,7 @@ async function waitMs(ms) {
 export async function getProductCollection() {
   if (!cachedCollection) {
     const { collectionName, host, port } = getChromaConfigInternal();
-    const maxAttempts = 3;
+    const maxAttempts = 15;
     let lastError;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
