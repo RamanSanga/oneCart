@@ -55,21 +55,38 @@ export function getChromaConfig() {
   return getChromaConfigInternal();
 }
 
+async function waitMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function getProductCollection() {
   if (!cachedCollection) {
-    const { collectionName } = getChromaConfigInternal();
-    try {
-      const client = getChromaClient();
-      cachedCollection = await client.getOrCreateCollection({
-        name: collectionName,
-        embeddingFunction: null,
-        metadata: { app: "oneCart", domain: "products" },
-      });
-    } catch (error) {
-      const { host, port } = getChromaConfigInternal();
+    const { collectionName, host, port } = getChromaConfigInternal();
+    const maxAttempts = 3;
+    let lastError;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const client = getChromaClient();
+        cachedCollection = await client.getOrCreateCollection({
+          name: collectionName,
+          embeddingFunction: null,
+          metadata: { app: "oneCart", domain: "products" },
+        });
+        break;
+      } catch (error) {
+        lastError = error;
+        console.warn(`[Chroma Connection Attempt ${attempt}/${maxAttempts}] Failed: ${error.message}`);
+        if (attempt < maxAttempts) {
+          await waitMs(3000); // Wait 3 seconds for container routing to stabilize
+        }
+      }
+    }
+
+    if (!cachedCollection) {
       throw new Error(
-        `Unable to initialize ChromaDB collection "${collectionName}" at ${host}:${port}. ` +
-        `Original error: ${error.message}`
+        `Unable to initialize ChromaDB collection "${collectionName}" at ${host}:${port} after ${maxAttempts} attempts. ` +
+        `Original error: ${lastError.message}`
       );
     }
   }
