@@ -61,34 +61,13 @@ async function waitMs(ms) {
 
 export async function getProductCollection() {
   if (!cachedCollection) {
-    const { collectionName, host, port } = getChromaConfigInternal();
-    const maxAttempts = 15;
-    let lastError;
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        const client = getChromaClient();
-        cachedCollection = await client.getOrCreateCollection({
-          name: collectionName,
-          embeddingFunction: null,
-          metadata: { app: "oneCart", domain: "products" },
-        });
-        break;
-      } catch (error) {
-        lastError = error;
-        console.warn(`[Chroma Connection Attempt ${attempt}/${maxAttempts}] Failed: ${error.message}`);
-        if (attempt < maxAttempts) {
-          await waitMs(3000); // Wait 3 seconds for container routing to stabilize
-        }
-      }
-    }
-
-    if (!cachedCollection) {
-      throw new Error(
-        `Unable to initialize ChromaDB collection "${collectionName}" at ${host}:${port} after ${maxAttempts} attempts. ` +
-        `Original error: ${lastError.message}`
-      );
-    }
+    const { collectionName } = getChromaConfigInternal();
+    const client = getChromaClient();
+    cachedCollection = await client.getOrCreateCollection({
+      name: collectionName,
+      embeddingFunction: null,
+      metadata: { app: "oneCart", domain: "products" },
+    });
   }
   return cachedCollection;
 }
@@ -100,19 +79,38 @@ export async function getProductCollection() {
 export async function getProductVectorStore() {
   if (!cachedVectorStore) {
     const { collectionName, host, port } = getChromaConfigInternal();
-    try {
-      await getProductCollection();
-      cachedVectorStore = await LangChainChroma.fromExistingCollection(
-        getLangChainEmbeddings(),
-        {
-          index: getChromaClient(),
-          collectionName,
+    const maxAttempts = 15;
+    let lastError;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        // Force a fresh collection fetch by clearing cache each attempt
+        cachedCollection = undefined;
+        await getProductCollection();
+
+        cachedVectorStore = await LangChainChroma.fromExistingCollection(
+          getLangChainEmbeddings(),
+          {
+            index: getChromaClient(),
+            collectionName,
+          }
+        );
+        break;
+      } catch (error) {
+        lastError = error;
+        cachedCollection = undefined;
+        cachedVectorStore = undefined;
+        console.warn(`[Chroma Vector Store Attempt ${attempt}/${maxAttempts}] Failed: ${error.message}`);
+        if (attempt < maxAttempts) {
+          await waitMs(3000); // Wait 3 seconds for container routing to stabilize
         }
-      );
-    } catch (error) {
+      }
+    }
+
+    if (!cachedVectorStore) {
       throw new Error(
-        `Unable to initialize LangChain Chroma vector store for collection "${collectionName}" at ${host}:${port}. ` +
-        `Original error: ${error.message}`
+        `Unable to initialize LangChain Chroma vector store for collection "${collectionName}" at ${host}:${port} after ${maxAttempts} attempts. ` +
+        `Original error: ${lastError.message}`
       );
     }
   }
