@@ -25,7 +25,10 @@ export default function App() {
   const { userData, authReady } = useContext(userDataContext);
   const location = useLocation();
 
-  if (!authReady) return <Splash />;
+  const PROTECTED_ROUTES = ["/placeorder", "/ordersuccess", "/order", "/account", "/wishlist"];
+  const isProtectedRoute = PROTECTED_ROUTES.includes(location.pathname);
+
+  if (isProtectedRoute && !authReady) return <Splash />;
 
   return (
     <>
